@@ -30,11 +30,9 @@
       try {
         var rules = [];
         Array.from(document.styleSheets).forEach(function(sheet) {
-          try {
-            Array.from(sheet.cssRules).forEach(function(rule) {
-              if (rule.type === CSSRule.FONT_FACE_RULE) rules.push(rule.cssText);
-            });
-          } catch(e) {}
+          try { Array.from(sheet.cssRules).forEach(function(rule) {
+            if (rule.type === CSSRule.FONT_FACE_RULE) rules.push(rule.cssText);
+          }); } catch(e) {}
         });
         return rules.join('\n');
       } catch(e) { return ''; }
@@ -92,7 +90,7 @@ function PriceCard({
     height: CH,
     fill: K
   }), /*#__PURE__*/React.createElement("g", {
-    transform: `translate(0, 0) scale(${sideW / 607.7})`
+    transform: `translate(${xStart}, 0) scale(${sideW / 607.7})`
   }, /*#__PURE__*/React.createElement("path", {
     d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
     fill: "#FEDE00"
@@ -226,7 +224,9 @@ function PriceCard8x4({
   scale = 1
 }) {
   const CW = 420,
-    CH = 198; // 210×99mm at 2px/mm — 3 per A4
+    CH = 198; // 210×99mm at 2px/mm — A4 canvas
+  const CARD_W = 406; // 8 inches = 203mm × 2
+  const xStart = CW - CARD_W; // = 14 — left white strip for perforation
   const sideW = 88;
   const FONT = "'MadaniArabic', sans-serif";
   const badge = "SPECIAL OFFER";
@@ -268,26 +268,40 @@ function PriceCard8x4({
   }, /*#__PURE__*/React.createElement("rect", {
     width: CW,
     height: CH,
-    fill: W
+    fill: "#f0f0f0"
   }), /*#__PURE__*/React.createElement("rect", {
-    x: 0,
+    x: xStart,
+    y: 0,
+    width: CARD_W,
+    height: CH,
+    fill: W
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: xStart,
+    y1: 0,
+    x2: xStart,
+    y2: CH,
+    stroke: "#aaa",
+    strokeWidth: "0.8",
+    strokeDasharray: "5,3"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: xStart,
     y: 0,
     width: sideW,
     height: logoBotR,
     fill: K
   }), /*#__PURE__*/React.createElement("rect", {
-    x: 0,
+    x: xStart,
     y: logoBotR,
     width: sideW,
     height: CH - logoBotR,
     fill: R
   }), /*#__PURE__*/React.createElement("g", {
-    transform: `translate(0, 0) scale(${sideW / 607.7})`
+    transform: `translate(${xStart}, 0) scale(${sideW / 607.7})`
   }, /*#__PURE__*/React.createElement("path", {
     d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
     fill: Y
   })), /*#__PURE__*/React.createElement("foreignObject", {
-    x: 0,
+    x: xStart,
     y: logoBotR,
     width: sideW,
     height: CH - logoBotR
@@ -311,9 +325,9 @@ function PriceCard8x4({
       overflow: "hidden"
     }
   }, badge)), /*#__PURE__*/React.createElement("foreignObject", {
-    x: sideW + 12,
+    x: xStart + sideW + 12,
     y: 8,
-    width: CW - sideW - 20,
+    width: CARD_W - sideW - 20,
     height: 90
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml"
@@ -363,9 +377,9 @@ function PriceCard8x4({
       letterSpacing: "-0.5"
     }, tier));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
-    x: sideW + 12,
+    x: xStart + sideW + 12,
     y: 90,
-    width: CW - sideW - 20,
+    width: CARD_W - sideW - 20,
     height: 26
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml",
@@ -585,8 +599,11 @@ function App() {
       const cardsPerSheet = 3;
       const printCards8 = cards8x4; // 3 independent cards
 
+      const CARD_W = 406; // 8 inches = 203.2mm × 2 SVG units/mm
+      const xStart = CW - CARD_W; // = 14 SVG units left margin
+
       const cardGroup = (card, yOffset) => {
-        if (!card) return `<rect x="0" y="${yOffset}" width="${CW}" height="${CH}" fill="white"/>`;
+        if (!card) return `<rect x="${xStart}" y="${yOffset}" width="${CARD_W}" height="${CH}" fill="white"/>`;
         const badge = "SPECIAL OFFER";
         const badgeWords = badge.split(" ");
         const longestWord = Math.max(...badgeWords.map(w => w.length));
@@ -594,29 +611,31 @@ function App() {
         const logoBotR = Math.round(800 * sideW / 607.7);
         const scaleX = (sideW / 607.7).toFixed(5);
         return `
-          <rect x="0" y="${yOffset}" width="${CW}" height="${CH}" fill="white"/>
-          <rect x="0" y="${yOffset}" width="${sideW}" height="${logoBotR}" fill="#000000"/>
-          <rect x="0" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}" fill="#CC2222"/>
-          <g transform="translate(0,${yOffset}) scale(${scaleX})"><path d="${logoPath}" fill="#FEDE00"/></g>
-          <foreignObject x="0" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
+          <rect x="${xStart}" y="${yOffset}" width="${CARD_W}" height="${CH}" fill="white"/>
+          <rect x="${xStart}" y="${yOffset}" width="${sideW}" height="${logoBotR}" fill="#000000"/>
+          <rect x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}" fill="#CC2222"/>
+          <g transform="translate(${xStart},${yOffset}) scale(${scaleX})"><path d="${logoPath}" fill="#FEDE00"/></g>
+          <foreignObject x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
             <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'MadaniArabic',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;line-height:1.2;text-transform:uppercase;letter-spacing:0.04em;text-align:center;word-break:break-word;overflow:hidden">${badge}</div>
           </foreignObject>
-          <foreignObject x="${sideW + 12}" y="${yOffset + 8}" width="${CW - sideW - 20}" height="90">
+          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="90">
             <div xmlns="http://www.w3.org/1999/xhtml">
               <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:26px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
               ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:12px;color:#000;margin-top:4px">${card.size}</div>` : ""}
             </div>
           </foreignObject>
-          ${card.wasPrice ? `<foreignObject x="${sideW + 12}" y="${yOffset + 90}" width="${CW - sideW - 20}" height="26"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:20px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
+          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 90}" width="${CARD_W - sideW - 20}" height="26"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:20px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
           <text x="${CW - 14}" y="${yOffset + 156}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="50" letter-spacing="-1">${card.nowPrice}</text>
           ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 178}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="12">${card.unitPrice}</text>` : ""}`;
       };
 
-      // Single SVG per sheet containing all 3 cards — no CSS layout issues
+      // Single SVG — 8-inch cards right-aligned, perforation line on left
       const sheetHTML = `<svg width="210mm" height="297mm" viewBox="0 0 ${CW} ${CH * 3}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+        <rect x="0" y="0" width="${xStart}" height="${CH * 3}" fill="white"/>
+        <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 3}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
         ${printCards8.map((card, ci) => `
           ${cardGroup(card, ci * CH)}
-          ${ci < 2 ? `<line x1="0" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
+          ${ci < 2 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
         `).join("")}
       </svg>`;
       html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
