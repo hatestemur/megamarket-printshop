@@ -218,14 +218,14 @@ function PriceCard({
   }, badge)));
 }
 
-/* ─── Price Card 8×4 SVG (3 per A4 sheet) ──────────── */
+/* ─── Price Card 8×4 SVG (4 per A4 sheet) ──────────── */
 function PriceCard8x4({
   card,
   scale = 1,
   fit = false
 }) {
   const CW = 420,
-    CH = 152; // A4 canvas: 152 = 76mm × 2
+    CH = 148; // A4 canvas: 148 ≈ 74mm × 2 (4 per A4)
   const CARD_W = 304; // 152mm × 2 SVG units/mm
   const xStart = CW - CARD_W; // = 116 — left margin for perforation
   const sideW = 64;
@@ -331,7 +331,7 @@ function PriceCard8x4({
     x: xStart + sideW + 12,
     y: 8,
     width: CARD_W - sideW - 20,
-    height: 65
+    height: 60
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml"
   }, /*#__PURE__*/React.createElement("div", {
@@ -367,7 +367,7 @@ function PriceCard8x4({
       ys.push(acc + fs * 0.78);
       acc += fs * 1.3;
     });
-    const startY = 142 - acc;
+    const startY = 138 - acc;
     return activeTiers.map((tier, i) => /*#__PURE__*/React.createElement("text", {
       key: i,
       x: CW - 14,
@@ -381,7 +381,7 @@ function PriceCard8x4({
     }, tier));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: xStart + sideW + 12,
-    y: 65,
+    y: 62,
     width: CARD_W - sideW - 20,
     height: 20
   }, /*#__PURE__*/React.createElement("div", {
@@ -399,7 +399,7 @@ function PriceCard8x4({
     }
   }, card.wasPrice)) : null, /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
-    y: 120,
+    y: 116,
     textAnchor: "end",
     fill: "#000",
     fontFamily: FONT,
@@ -410,7 +410,7 @@ function PriceCard8x4({
     fill: "#ddd"
   }, "0.00")), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
-    y: 137,
+    y: 132,
     textAnchor: "end",
     fill: "#000",
     fontFamily: FONT,
@@ -459,7 +459,7 @@ function App() {
   const [editIdx, setEditIdx] = useState(null);
   const [tab, setTab] = useState("editor");
   const [template, setTemplate] = useState("a4");
-  const [cards8x4, setCards8x4] = useState(() => [0, 1, 2].map(() => ({
+  const [cards8x4, setCards8x4] = useState(() => [0, 1, 2, 3].map(() => ({
     productName: "",
     size: "",
     wasPrice: "",
@@ -597,9 +597,9 @@ function App() {
     } else {
       // 8×4: 3 cards per A4 sheet with cut guides
       const CW = 420,
-        CH = 152,
-        sideW = 64; // 76mm × 2 = 152; 152mm × 2 / 420 → sideW=64
-      const cardsPerSheet = 3;
+        CH = 148,
+        sideW = 64; // ~74mm × 2 = 148; 4 per A4
+      const cardsPerSheet = 4;
       const printCards8 = cards8x4;
       const CARD_W = 304; // 152mm × 2 SVG units/mm
       const xStart = CW - CARD_W; // = 116 SVG units left margin
@@ -620,15 +620,15 @@ function App() {
           <foreignObject x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
             <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'MadaniArabic',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;line-height:1.2;text-transform:uppercase;letter-spacing:0.04em;text-align:center;word-break:break-word;overflow:hidden">${badge}</div>
           </foreignObject>
-          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="65">
+          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="60">
             <div xmlns="http://www.w3.org/1999/xhtml">
               <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:20px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
               ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:10px;color:#000;margin-top:3px">${card.size}</div>` : ""}
             </div>
           </foreignObject>
-          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 65}" width="${CARD_W - sideW - 20}" height="20"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
-          <text x="${CW - 14}" y="${yOffset + 120}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">${card.nowPrice}</text>
-          ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 137}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">${card.unitPrice}</text>` : ""}`;
+          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 62}" width="${CARD_W - sideW - 20}" height="20"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
+          <text x="${CW - 14}" y="${yOffset + 116}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">${card.nowPrice}</text>
+          ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 132}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">${card.unitPrice}</text>` : ""}`;
       };
 
       // 152×76mm cards, right-aligned with perf line
@@ -637,7 +637,7 @@ function App() {
         <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 3}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
         ${printCards8.map((card, ci) => `
           ${cardGroup(card, ci * CH)}
-          ${ci < 2 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
+          ${ci < 3 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
         `).join("")}
       </svg>`;
       html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
@@ -1029,7 +1029,7 @@ function App() {
     style: {
       flexShrink: 0,
       width: template === "a4" ? "min(calc(100% - 16px), calc((100vh - 220px) * 0.707))" : "min(calc(100% - 16px), calc((100vh - 220px) * 2.763))",
-      aspectRatio: template === "a4" ? "210 / 297" : "420 / 152",
+      aspectRatio: template === "a4" ? "210 / 297" : "420 / 148",
       boxShadow: "0 6px 28px rgba(0,0,0,0.22)",
       overflow: "hidden"
     }
@@ -1045,7 +1045,7 @@ function App() {
       color: "#bbb",
       letterSpacing: 1
     }
-  }, template === "a4" ? "A4 Portrait · 210×297mm" : "152×76mm · 3 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
+  }, template === "a4" ? "A4 Portrait · 210×297mm" : "152×74mm · 4 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -1247,7 +1247,7 @@ function App() {
     style: {
       display: "flex"
     }
-  }, [0, 1, 2].map((i, _, arr) => /*#__PURE__*/React.createElement("button", {
+  }, [0, 1, 2, 3].map((i, _, arr) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => setEditIdx8x4(i),
     style: {
@@ -1257,7 +1257,7 @@ function App() {
       background: editIdx8x4 === i ? Y : "#f0f0f0",
       color: editIdx8x4 === i ? K : "#555",
       border: "2px solid #e0e0e0",
-      borderRight: i < 2 ? "none" : "2px solid #e0e0e0",
+      borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
       fontWeight: 700,
       fontSize: 11,
       fontFamily: "system-ui, sans-serif",
@@ -1435,7 +1435,7 @@ function App() {
       textTransform: "uppercase",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "A4 Portrait \xB7 3 per sheet"), /*#__PURE__*/React.createElement("div", {
+  }, "A4 Portrait \xB7 4 per sheet"), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
       width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))",
@@ -1450,9 +1450,9 @@ function App() {
     onClick: () => setEditIdx8x4(i),
     style: {
       cursor: "pointer",
-      height: `${76 / 297 * 100}%`,
+      height: `${74.25 / 297 * 100}%`,
       outline: editIdx8x4 === i ? "3px solid #FEDE00" : "3px solid transparent",
-      borderBottom: i < 2 ? "1px dashed #bbb" : "none",
+      borderBottom: i < 3 ? "1px dashed #bbb" : "none",
       overflow: "hidden",
       boxSizing: "border-box"
     }
