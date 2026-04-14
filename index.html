@@ -632,9 +632,9 @@ function App() {
       };
 
       // 152×76mm cards, right-aligned with perf line
-      const sheetHTML = `<svg viewBox="0 0 ${CW} ${CH * 3}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">
-        <rect x="0" y="0" width="${xStart}" height="${CH * 3}" fill="white"/>
-        <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 3}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
+      const sheetHTML = `<svg viewBox="0 0 ${CW} ${CH * 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">
+        <rect x="0" y="0" width="${xStart}" height="${CH * 4}" fill="white"/>
+        <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
         ${printCards8.map((card, ci) => `
           ${cardGroup(card, ci * CH)}
           ${ci < 3 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
