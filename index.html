@@ -329,16 +329,15 @@ function PriceCard8x4({
     }
   }, badge)), /*#__PURE__*/React.createElement("foreignObject", {
     x: xStart + sideW + 12,
-    y: 8,
+    y: 6,
     width: CARD_W - sideW - 20,
-    height: 60
+    height: 46
   }, /*#__PURE__*/React.createElement("div", {
-    xmlns: "http://www.w3.org/1999/xhtml"
-  }, /*#__PURE__*/React.createElement("div", {
+    xmlns: "http://www.w3.org/1999/xhtml",
     style: {
       fontFamily: FONT,
       fontWeight: 500,
-      fontSize: 20,
+      fontSize: 17,
       lineHeight: 1.2,
       color: "#000",
       letterSpacing: "-0.01em"
@@ -347,15 +346,20 @@ function PriceCard8x4({
     style: {
       color: "#ccc"
     }
-  }, "Product Name")), card.size ? /*#__PURE__*/React.createElement("div", {
+  }, "Product Name"))), card.size ? /*#__PURE__*/React.createElement("foreignObject", {
+    x: xStart + sideW + 12,
+    y: 54,
+    width: CARD_W - sideW - 20,
+    height: 14
+  }, /*#__PURE__*/React.createElement("div", {
+    xmlns: "http://www.w3.org/1999/xhtml",
     style: {
       fontFamily: FONT,
       fontWeight: 400,
       fontSize: 10,
-      color: "#000",
-      marginTop: 3
+      color: "#555"
     }
-  }, card.size) : null)), card.priceMode === "multibuy" ? (() => {
+  }, card.size)) : null, card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
     const lastFs = n === 1 ? 40 : n === 2 ? 34 : n === 3 ? 26 : 20;
@@ -381,9 +385,9 @@ function PriceCard8x4({
     }, tier));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: xStart + sideW + 12,
-    y: 62,
+    y: 68,
     width: CARD_W - sideW - 20,
-    height: 20
+    height: 18
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml",
     style: {
@@ -620,13 +624,11 @@ function App() {
           <foreignObject x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
             <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'MadaniArabic',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;line-height:1.2;text-transform:uppercase;letter-spacing:0.04em;text-align:center;word-break:break-word;overflow:hidden">${badge}</div>
           </foreignObject>
-          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="60">
-            <div xmlns="http://www.w3.org/1999/xhtml">
-              <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:20px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
-              ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:10px;color:#000;margin-top:3px">${card.size}</div>` : ""}
-            </div>
+          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 6}" width="${CARD_W - sideW - 20}" height="46">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:17px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
           </foreignObject>
-          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 62}" width="${CARD_W - sideW - 20}" height="20"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
+          ${card.size ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 54}" width="${CARD_W - sideW - 20}" height="14"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:10px;color:#555">${card.size}</div></foreignObject>` : ""}
+          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 68}" width="${CARD_W - sideW - 20}" height="18"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
           <text x="${CW - 14}" y="${yOffset + 116}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">${card.nowPrice}</text>
           ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 132}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">${card.unitPrice}</text>` : ""}`;
       };
