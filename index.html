@@ -54,7 +54,8 @@ const EMPTY = {
 /* ─── Price Card SVG ────────────────────────────────── */
 function PriceCard({
   card,
-  scale = 1
+  scale = 1,
+  fit = false
 }) {
   const CW = 420,
     CH = 594; // A4 ratio: 210×297mm → 420×594px
@@ -67,11 +68,13 @@ function PriceCard({
   const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badgeLen * 0.62))));
   const FONT = "'MadaniArabic', sans-serif";
   return /*#__PURE__*/React.createElement("svg", {
-    width: CW * scale,
-    height: CH * scale,
+    width: fit ? "100%" : CW * scale,
+    height: fit ? "100%" : CH * scale,
     viewBox: `0 0 ${CW} ${CH}`,
     xmlns: "http://www.w3.org/2000/svg",
-    style: {
+    style: fit ? {
+      display: "block"
+    } : {
       display: "block",
       flexShrink: 0,
       boxShadow: scale >= 0.8 ? "0 6px 28px rgba(0,0,0,0.2)" : "none"
@@ -218,7 +221,8 @@ function PriceCard({
 /* ─── Price Card 8×4 SVG (3 per A4 sheet) ──────────── */
 function PriceCard8x4({
   card,
-  scale = 1
+  scale = 1,
+  fit = false
 }) {
   const CW = 420,
     CH = 152; // A4 canvas: 152 = 76mm × 2
@@ -253,11 +257,13 @@ function PriceCard8x4({
   const logoBotR = Math.round(800 * logoScale); // ≈116px
 
   return /*#__PURE__*/React.createElement("svg", {
-    width: CW * scale,
-    height: CH * scale,
+    width: fit ? "100%" : CW * scale,
+    height: fit ? "100%" : CH * scale,
     viewBox: `0 0 ${CW} ${CH}`,
     xmlns: "http://www.w3.org/2000/svg",
-    style: {
+    style: fit ? {
+      display: "block"
+    } : {
       display: "block",
       flexShrink: 0,
       boxShadow: scale >= 0.7 ? "0 3px 14px rgba(0,0,0,0.18)" : "none"
@@ -1005,11 +1011,13 @@ function App() {
       alignItems: "center",
       justifyContent: "center",
       background: "#e0e0e0",
-      padding: 32
+      overflow: "hidden",
+      padding: 24,
+      gap: 12,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      marginBottom: 14,
       fontSize: 10,
       fontWeight: 700,
       letterSpacing: 3,
@@ -1017,20 +1025,27 @@ function App() {
       textTransform: "uppercase",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "Live Preview"), template === "a4" ? /*#__PURE__*/React.createElement(PriceCard, {
+  }, "Live Preview"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flexShrink: 0,
+      width: template === "a4" ? "min(calc(100% - 16px), calc((100vh - 220px) * 0.707))" : "min(calc(100% - 16px), calc((100vh - 220px) * 2.763))",
+      aspectRatio: template === "a4" ? "210 / 297" : "420 / 152",
+      boxShadow: "0 6px 28px rgba(0,0,0,0.22)",
+      overflow: "hidden"
+    }
+  }, template === "a4" ? /*#__PURE__*/React.createElement(PriceCard, {
     card: form,
-    scale: 0.86
+    fit: true
   }) : /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: form,
-    scale: 0.96
-  }), /*#__PURE__*/React.createElement("div", {
+    fit: true
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 12,
       fontSize: 10,
       color: "#bbb",
       letterSpacing: 1
     }
-  }, template === "a4" ? "A4 Portrait · 210×297mm" : "8×4 · 3 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
+  }, template === "a4" ? "A4 Portrait · 210×297mm" : "152×76mm · 3 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -1404,14 +1419,16 @@ function App() {
       flex: 1,
       display: "flex",
       flexDirection: "column",
-      alignItems: "flex-end",
+      alignItems: "center",
       justifyContent: "center",
       background: "#e0e0e0",
-      padding: "24px 32px 24px 24px"
+      overflow: "hidden",
+      padding: 24,
+      gap: 10,
+      minWidth: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      marginBottom: 8,
       fontSize: 10,
       color: "#999",
       letterSpacing: 1,
@@ -1420,20 +1437,28 @@ function App() {
     }
   }, "A4 Portrait \xB7 3 per sheet"), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: W,
-      boxShadow: "0 6px 28px rgba(0,0,0,0.22)"
+      flexShrink: 0,
+      width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))",
+      aspectRatio: "210 / 297",
+      background: "#f0f0f0",
+      boxShadow: "0 6px 28px rgba(0,0,0,0.22)",
+      overflow: "hidden",
+      position: "relative"
     }
   }, cards8x4.map((card, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     onClick: () => setEditIdx8x4(i),
     style: {
       cursor: "pointer",
+      height: `${76 / 297 * 100}%`,
       outline: editIdx8x4 === i ? "3px solid #FEDE00" : "3px solid transparent",
-      borderBottom: i < 2 ? "1px dashed #bbb" : "none"
+      borderBottom: i < 2 ? "1px dashed #bbb" : "none",
+      overflow: "hidden",
+      boxSizing: "border-box"
     }
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
-    scale: 0.7
+    fit: true
   })))))))));
 }
     const domRoot = ReactDOM.createRoot(document.getElementById('root'));
