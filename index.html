@@ -1414,7 +1414,31 @@ function App() {
       width: "100%",
       borderRadius: 3
     }
-  }, "+ Add Tier"))), /*#__PURE__*/React.createElement("div", {
+  }, "+ Add Tier")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (editIdx8x4 < 3) setEditIdx8x4(editIdx8x4 + 1);
+    },
+    disabled: !canSave8,
+    style: {
+      flex: 1,
+      background: canSave8 ? K : "#ddd",
+      color: canSave8 ? W : "#aaa",
+      border: "none",
+      padding: "12px",
+      fontWeight: 800,
+      fontSize: 13,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      cursor: canSave8 ? "pointer" : "not-allowed",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, editIdx8x4 < 3 ? "Save & Next Card" : "✓ Card Saved"))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       display: "flex",
