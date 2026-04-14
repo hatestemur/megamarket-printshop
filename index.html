@@ -243,7 +243,7 @@ function PriceCard8x4({
     }
     return lines;
   };
-  let badgeFontSize = 15;
+  let badgeFontSize = 11;
   while (badgeFontSize > 7 && estimateLines(badgeFontSize) > 3) badgeFontSize--;
 
   // Logo outer path M0,0v607.7l607.7,192.3V0H0Z scaled to sideW:
@@ -325,7 +325,7 @@ function PriceCard8x4({
     x: xStart + sideW + 12,
     y: 8,
     width: CARD_W - sideW - 20,
-    height: 50
+    height: 65
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml"
   }, /*#__PURE__*/React.createElement("div", {
@@ -603,7 +603,7 @@ function App() {
         const badge = "SPECIAL OFFER";
         const badgeWords = badge.split(" ");
         const longestWord = Math.max(...badgeWords.map(w => w.length));
-        const badgeFontSize = Math.max(9, Math.min(15, Math.floor(68 / (longestWord * 0.62))));
+        const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (longestWord * 0.62))));
         const logoBotR = Math.round(800 * sideW / 607.7);
         const scaleX = (sideW / 607.7).toFixed(5);
         return `
@@ -614,7 +614,7 @@ function App() {
           <foreignObject x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
             <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'MadaniArabic',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;line-height:1.2;text-transform:uppercase;letter-spacing:0.04em;text-align:center;word-break:break-word;overflow:hidden">${badge}</div>
           </foreignObject>
-          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="50">
+          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 8}" width="${CARD_W - sideW - 20}" height="65">
             <div xmlns="http://www.w3.org/1999/xhtml">
               <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:20px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
               ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:10px;color:#000;margin-top:3px">${card.size}</div>` : ""}
