@@ -34,6 +34,49 @@
           }); } catch(e) {} });
         return rules.join('\n');
       } catch(e) { return ''; } };
+/* ─── Unit price auto-calculator ─────────────────── */
+function calcUnitPrice(size, price) {
+  if (!size || !price) return "";
+  // Parse price: £2.99 / 2.99 / 99p
+  let priceVal = 0;
+  const pMatch = price.match(/^(\d+\.?\d*)\s*p$/i);
+  const gbpMatch = price.match(/£?(\d+\.?\d+)/);
+  if (pMatch) priceVal = parseFloat(pMatch[1]) / 100;else if (gbpMatch) priceVal = parseFloat(gbpMatch[1]);
+  if (!priceVal) return "";
+  // Parse size — handle packs like 6x330ml or 4 x 500g
+  const s = size.toLowerCase().trim();
+  let qty = 0,
+    unit = "";
+  const packM = s.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)\s*(g|kg|ml|l|cl)/i);
+  const singleM = s.match(/(\d+\.?\d*)\s*(g|kg|ml|l|cl)/i);
+  if (packM) {
+    qty = parseFloat(packM[1]) * parseFloat(packM[2]);
+    unit = packM[3];
+  } else if (singleM) {
+    qty = parseFloat(singleM[1]);
+    unit = singleM[2];
+  } else return "";
+  // Normalise to base unit (g or ml)
+  unit = unit.toLowerCase();
+  if (unit === "kg") {
+    qty *= 1000;
+    unit = "g";
+  }
+  if (unit === "l") {
+    qty *= 1000;
+    unit = "ml";
+  }
+  if (unit === "cl") {
+    qty *= 10;
+    unit = "ml";
+  }
+  if (!qty) return "";
+  const per100 = priceVal / qty * 100;
+  const label = unit === "g" ? "100g" : "100ml";
+  const pence = per100 * 100;
+  if (pence < 100) return Math.round(pence * 10) / 10 + "p per " + label;
+  return "£" + per100.toFixed(2) + " per " + label;
+}
 const Y = "#FEDE00";
 const K = "#000000";
 const W = "#FFFFFF";
@@ -503,10 +546,17 @@ function App() {
   const [editingLibId, setEditingLibId] = useState(null);
   const [editingLibName, setEditingLibName] = useState("");
   const [toast, setToast] = useState(null);
-  const set = (k, v) => setForm(f => ({
-    ...f,
-    [k]: v
-  }));
+  const set = (k, v) => setForm(f => {
+    const next = {
+      ...f,
+      [k]: v
+    };
+    if (k === "size" || k === "nowPrice") {
+      const auto = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
+      if (auto) next.unitPrice = auto;
+    }
+    return next;
+  });
   const setTier = (i, v) => setForm(f => {
     const t = [...f.tiers];
     t[i] = v;
@@ -523,10 +573,18 @@ function App() {
     ...f,
     tiers: f.tiers.filter((_, j) => j !== i)
   }));
-  const set8 = (k, v) => setCards8x4(prev => prev.map((c, i) => i === editIdx8x4 ? {
-    ...c,
-    [k]: v
-  } : c));
+  const set8 = (k, v) => setCards8x4(prev => prev.map((c, i) => {
+    if (i !== editIdx8x4) return c;
+    const next = {
+      ...c,
+      [k]: v
+    };
+    if (k === "size" || k === "nowPrice") {
+      const auto = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
+      if (auto) next.unitPrice = auto;
+    }
+    return next;
+  }));
   const setTier8 = (ti, v) => setCards8x4(prev => prev.map((c, i) => {
     if (i !== editIdx8x4) return c;
     const t = [...c.tiers];
@@ -1598,7 +1656,14 @@ function App() {
     placeholder: "e.g. 60p per 100ml",
     value: card8.unitPrice,
     onChange: e => set8("unitPrice", e.target.value)
-  }))), card8.priceMode === "wasnow" && /*#__PURE__*/React.createElement("div", {
+  }), card8.size && card8.nowPrice && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#aaa",
+      marginTop: 3,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "auto-calculated \xB7 edit to override"))), card8.priceMode === "wasnow" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -1626,7 +1691,14 @@ function App() {
     placeholder: "e.g. 60p per 100ml",
     value: card8.unitPrice,
     onChange: e => set8("unitPrice", e.target.value)
-  }))), card8.priceMode === "multibuy" && /*#__PURE__*/React.createElement("div", {
+  }), card8.size && card8.nowPrice && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#aaa",
+      marginTop: 3,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "auto-calculated \xB7 edit to override"))), card8.priceMode === "multibuy" && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 18
     }
