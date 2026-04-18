@@ -492,8 +492,8 @@ function App() {
     } catch (e) {}
     return [];
   });
-  const [savePrompt, setSavePrompt] = useState(false);
-  const [saveName, setSaveName] = useState("");
+  const [editingLibId, setEditingLibId] = useState(null);
+  const [editingLibName, setEditingLibName] = useState("");
   const [toast, setToast] = useState(null);
   const set = (k, v) => setForm(f => ({
     ...f,
@@ -563,10 +563,19 @@ function App() {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
+  const autoName = (tmpl, cds) => {
+    var _cds$, _cds$find;
+    const first = tmpl === "a4" ? (_cds$ = cds[0]) === null || _cds$ === void 0 ? void 0 : _cds$.productName : (_cds$find = cds.find(c => c.productName)) === null || _cds$find === void 0 ? void 0 : _cds$find.productName;
+    const date = new Date().toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short"
+    });
+    return first ? `${first.split(" ").slice(0, 3).join(" ")} · ${date}` : `${tmpl === "a4" ? "A4" : "8×4"} · ${date}`;
+  };
   const saveToLibrary = name => {
     const entry = {
       id: Date.now(),
-      name: name || (template === "a4" ? "A4 Batch" : "8×4 Sheet"),
+      name: name || autoName(template, template === "a4" ? cards : cards8x4),
       type: template,
       cards: template === "a4" ? [...cards] : [...cards8x4],
       savedAt: new Date().toLocaleDateString("en-GB", {
@@ -598,6 +607,31 @@ function App() {
   const deleteFromLibrary = id => {
     setLibrary(lib => lib.filter(e => e.id !== id));
   };
+  const dupeInLibrary = entry => {
+    const copy = {
+      ...entry,
+      id: Date.now(),
+      name: entry.name + " (copy)",
+      savedAt: new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      })
+    };
+    setLibrary(lib => {
+      const idx = lib.findIndex(e => e.id === entry.id);
+      const next = [...lib];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+  };
+  const renameInLibrary = (id, name) => {
+    setLibrary(lib => lib.map(e => e.id === id ? {
+      ...e,
+      name
+    } : e));
+  };
+  const hasUnsaved = template === "a4" ? cards.length > 0 : cards8x4.some(c => c.productName);
   const clearCurrent = () => {
     if (template === "a4") {
       setCards([]);
@@ -809,78 +843,7 @@ function App() {
       boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       whiteSpace: "nowrap"
     }
-  }, toast), savePrompt && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.6)",
-      zIndex: 9998,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: W,
-      padding: 28,
-      width: "min(400px, 90vw)",
-      boxShadow: "0 8px 40px rgba(0,0,0,0.3)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 800,
-      fontSize: 14,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      fontFamily: "system-ui,sans-serif",
-      marginBottom: 16
-    }
-  }, "Save to Library"), /*#__PURE__*/React.createElement("input", {
-    style: {
-      ...inp,
-      marginBottom: 16
-    },
-    placeholder: "e.g. Week 3 Promotions",
-    value: saveName,
-    onChange: e => setSaveName(e.target.value),
-    autoFocus: true
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      saveToLibrary(saveName);
-      setSavePrompt(false);
-      showToast("Saved to library ✓");
-    },
-    style: {
-      flex: 1,
-      background: K,
-      color: W,
-      border: "none",
-      padding: "11px",
-      fontWeight: 800,
-      fontSize: 12,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Save"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setSavePrompt(false),
-    style: {
-      background: "#eee",
-      color: "#555",
-      border: "none",
-      padding: "11px 18px",
-      fontWeight: 700,
-      fontSize: 12,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Cancel")))), /*#__PURE__*/React.createElement("div", {
+  }, toast), /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
@@ -919,7 +882,17 @@ function App() {
       alignItems: "center",
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, hasUnsaved && view === "editor" && /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 7,
+      height: 7,
+      borderRadius: "50%",
+      background: Y,
+      display: "inline-block",
+      flexShrink: 0
+    },
+    title: "Unsaved changes"
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setView(view === "library" ? "editor" : "library"),
     style: {
       background: view === "library" ? Y : "#222",
@@ -933,25 +906,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
-  }, view === "library" ? "← Editor" : `Library${library.length ? " (" + library.length + ")" : ""}`), view === "editor" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setSaveName("");
-      setSavePrompt(true);
-    },
-    disabled: template === "a4" ? !cards.length : !cards8x4.some(c => c.productName),
-    style: {
-      background: "#333",
-      color: "#ccc",
-      border: "none",
-      padding: "8px 14px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui, sans-serif"
-    }
-  }, "Save"), /*#__PURE__*/React.createElement("div", {
+  }, view === "library" ? "← Editor" : `Library${library.length ? " (" + library.length + ")" : ""}`), view === "editor" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -985,7 +940,7 @@ function App() {
       textAlign: "right",
       lineHeight: 1.3
     }
-  }, "iOS: Options \u2192 off Headers & Footers"))))), template === "a4" && /*#__PURE__*/React.createElement("div", {
+  }, "iOS: Options \u2192 off Headers & Footers")))), template === "a4" && /*#__PURE__*/React.createElement("div", {
     style: {
       background: W,
       borderBottom: "1px solid #ddd",
@@ -1747,7 +1702,7 @@ function App() {
     key: entry.id,
     style: {
       background: W,
-      padding: "16px 18px",
+      padding: "14px 16px",
       display: "flex",
       alignItems: "center",
       gap: 12,
@@ -1766,7 +1721,33 @@ function App() {
       flex: 1,
       minWidth: 0
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, editingLibId === entry.id ? /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...inp,
+      padding: "4px 8px",
+      fontSize: 14,
+      fontWeight: 800,
+      marginBottom: 2
+    },
+    value: editingLibName,
+    autoFocus: true,
+    onChange: e => setEditingLibName(e.target.value),
+    onBlur: () => {
+      renameInLibrary(entry.id, editingLibName || entry.name);
+      setEditingLibId(null);
+    },
+    onKeyDown: e => {
+      if (e.key === "Enter" || e.key === "Escape") {
+        renameInLibrary(entry.id, editingLibName || entry.name);
+        setEditingLibId(null);
+      }
+    }
+  }) : /*#__PURE__*/React.createElement("div", {
+    onClick: () => {
+      setEditingLibId(entry.id);
+      setEditingLibName(entry.name);
+    },
+    title: "Click to rename",
     style: {
       fontWeight: 800,
       fontSize: 14,
@@ -1774,8 +1755,12 @@ function App() {
       color: K,
       overflow: "hidden",
       textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
+      whiteSpace: "nowrap",
+      cursor: "text",
+      borderBottom: "1px dashed transparent"
+    },
+    onMouseEnter: e => e.target.style.borderBottomColor = "#ccc",
+    onMouseLeave: e => e.target.style.borderBottomColor = "transparent"
   }, entry.name), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
@@ -1787,7 +1772,9 @@ function App() {
     style: {
       display: "flex",
       gap: 6,
-      flexShrink: 0
+      flexShrink: 0,
+      flexWrap: "wrap",
+      justifyContent: "flex-end"
     }
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => loadFromLibrary(entry),
@@ -1795,7 +1782,7 @@ function App() {
       background: K,
       color: W,
       border: "none",
-      padding: "8px 14px",
+      padding: "8px 12px",
       fontWeight: 800,
       fontSize: 11,
       letterSpacing: 1.5,
@@ -1804,15 +1791,29 @@ function App() {
       fontFamily: "system-ui,sans-serif"
     }
   }, "Load"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => dupeInLibrary(entry),
+    style: {
+      background: "#f0f0f0",
+      color: "#555",
+      border: "none",
+      padding: "8px 12px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Dupe"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       loadFromLibrary(entry);
-      setTimeout(() => print(), 100);
+      setTimeout(() => print(), 300);
     },
     style: {
       background: Y,
       color: K,
       border: "none",
-      padding: "8px 14px",
+      padding: "8px 12px",
       fontWeight: 800,
       fontSize: 11,
       letterSpacing: 1.5,
@@ -1826,9 +1827,9 @@ function App() {
     },
     style: {
       background: "#f0f0f0",
-      color: "#888",
+      color: "#c00",
       border: "none",
-      padding: "8px 12px",
+      padding: "8px 10px",
       fontWeight: 700,
       fontSize: 12,
       cursor: "pointer",
