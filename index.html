@@ -484,6 +484,14 @@ function App() {
     }));
   });
   const [editIdx8x4, setEditIdx8x4] = useState(0);
+  const [batch8x4, setBatch8x4] = useState(() => {
+    try {
+      const s = localStorage.getItem('megamarket_batch8x4');
+      if (s) return JSON.parse(s);
+    } catch (e) {}
+    return [];
+  });
+  const [tab8x4, setTab8x4] = useState("editor");
   const [view, setView] = useState("editor"); // "editor" | "library"
   const [library, setLibrary] = useState(() => {
     try {
@@ -553,6 +561,12 @@ function App() {
       localStorage.setItem(STORAGE_KEY_8X4, JSON.stringify(cards8x4));
     } catch (e) {}
   }, [cards8x4]);
+  const STORAGE_KEY_BATCH8 = "megamarket_batch8x4";
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_BATCH8, JSON.stringify(batch8x4));
+    } catch (e) {}
+  }, [batch8x4]);
   const STORAGE_KEY_LIB = "megamarket_library";
   React.useEffect(() => {
     try {
@@ -575,9 +589,9 @@ function App() {
   const saveToLibrary = name => {
     const entry = {
       id: Date.now(),
-      name: name || autoName(template, template === "a4" ? cards : cards8x4),
+      name: name || autoName(template, template === "a4" ? cards : batch8x4.length ? batch8x4[0] : cards8x4),
       type: template,
-      cards: template === "a4" ? [...cards] : [...cards8x4],
+      cards: template === "a4" ? [...cards] : batch8x4.length ? batch8x4 : [cards8x4],
       savedAt: new Date().toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
@@ -597,9 +611,22 @@ function App() {
       setEditIdx(null);
       setTab("batch");
     } else {
-      setCards8x4(entry.cards);
+      setBatch8x4(entry.cards);
+      setCards8x4([0, 1, 2, 3].map(() => ({
+        productName: "",
+        size: "",
+        wasPrice: "",
+        nowPrice: "",
+        unitPrice: "",
+        badgeText: "SPECIAL OFFER",
+        badgeBg: R,
+        badgeFg: K,
+        priceMode: "single",
+        tiers: ["", ""]
+      })));
       setTemplate("8x4");
       setEditIdx8x4(0);
+      setTab8x4("batch");
     }
     setView("editor");
     showToast("Template loaded");
@@ -631,7 +658,33 @@ function App() {
       name
     } : e));
   };
-  const hasUnsaved = template === "a4" ? cards.length > 0 : cards8x4.some(c => c.productName);
+  const addSheetToBatch8 = () => {
+    setBatch8x4(b => [...b, [...cards8x4]]);
+    setCards8x4([0, 1, 2, 3].map(() => ({
+      productName: "",
+      size: "",
+      wasPrice: "",
+      nowPrice: "",
+      unitPrice: "",
+      badgeText: "SPECIAL OFFER",
+      badgeBg: R,
+      badgeFg: K,
+      priceMode: "single",
+      tiers: ["", ""]
+    })));
+    setEditIdx8x4(0);
+    setTab8x4("batch");
+  };
+  const startEditSheet8 = i => {
+    setCards8x4([...batch8x4[i]]);
+    setEditIdx8x4(0);
+    setBatch8x4(b => b.filter((_, j) => j !== i));
+    setTab8x4("editor");
+  };
+  const delSheet8 = i => setBatch8x4(b => b.filter((_, j) => j !== i));
+  const dupeSheet8 = i => setBatch8x4(b => [...b.slice(0, i + 1), [...b[i]], ...b.slice(i + 1)]);
+  const canAddSheet = cards8x4.some(c => c.productName);
+  const hasUnsaved = template === "a4" ? cards.length > 0 : cards8x4.some(c => c.productName) || batch8x4.length > 0;
   const clearCurrent = () => {
     if (template === "a4") {
       setCards([]);
@@ -653,7 +706,9 @@ function App() {
         priceMode: "single",
         tiers: ["", ""]
       })));
+      setBatch8x4([]);
       setEditIdx8x4(0);
+      setTab8x4("editor");
     }
   };
   const save = () => {
@@ -738,7 +793,7 @@ function App() {
         CH = 148,
         sideW = 64; // ~74mm × 2 = 148; 4 per A4
       const cardsPerSheet = 4;
-      const printCards8 = cards8x4;
+      const printCards8 = batch8x4.length ? batch8x4 : [cards8x4];
       const CARD_W = 304; // 152mm × 2 SVG units/mm
       const xStart = CW - CARD_W; // = 116 SVG units left margin
 
@@ -769,15 +824,16 @@ function App() {
           ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 126}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">${card.unitPrice}</text>` : ""}`;
       };
 
-      // 152×76mm cards, right-aligned with perf line
-      const sheetHTML = `<svg viewBox="0 0 ${CW} ${CH * 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">
+      // 152×74mm cards, right-aligned — one SVG per sheet
+      const sheetSVG = sheetCards => `<svg viewBox="0 0 ${CW} ${CH * 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">
         <rect x="0" y="0" width="${xStart}" height="${CH * 4}" fill="white"/>
         <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
-        ${printCards8.map((card, ci) => `
+        ${sheetCards.map((card, ci) => `
           ${cardGroup(card, ci * CH)}
           ${ci < 3 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
         `).join("")}
       </svg>`;
+      const sheetHTML = printCards8.map((sheet, si) => `<div class="sheet" style="page-break-after:${si < printCards8.length - 1 ? 'always' : 'auto'}">${sheetSVG(sheet)}</div>`).join("");
       html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
         @page{size:A4 portrait;margin:0}
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1361,7 +1417,20 @@ function App() {
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
     }
-  }, card.productName)))))), template === "8x4" && /*#__PURE__*/React.createElement("div", {
+  }, card.productName)))))), template === "8x4" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: W,
+      borderBottom: "1px solid #ddd",
+      padding: "0 20px",
+      display: "flex"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: `tb ${tab8x4 === "editor" ? "on" : ""}`,
+    onClick: () => setTab8x4("editor")
+  }, "+ New Sheet"), /*#__PURE__*/React.createElement("button", {
+    className: `tb ${tab8x4 === "batch" ? "on" : ""}`,
+    onClick: () => setTab8x4("batch")
+  }, "Batch (", batch8x4.length, ")")), tab8x4 === "editor" && /*#__PURE__*/React.createElement("div", {
     className: "main-row"
   }, /*#__PURE__*/React.createElement("div", {
     className: "form-pane"
@@ -1595,25 +1664,38 @@ function App() {
       gap: 8,
       marginTop: 4
     }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (editIdx8x4 < 3) setEditIdx8x4(editIdx8x4 + 1);
-    },
-    disabled: !canSave8,
+  }, editIdx8x4 < 3 ? /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEditIdx8x4(editIdx8x4 + 1),
     style: {
       flex: 1,
-      background: canSave8 ? K : "#ddd",
-      color: canSave8 ? W : "#aaa",
+      background: "#f0f0f0",
+      color: "#555",
       border: "none",
       padding: "12px",
       fontWeight: 800,
-      fontSize: 13,
+      fontSize: 12,
       letterSpacing: 2,
       textTransform: "uppercase",
-      cursor: canSave8 ? "pointer" : "not-allowed",
+      cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
-  }, editIdx8x4 < 3 ? "Save & Next Card" : "✓ Card Saved"))), /*#__PURE__*/React.createElement("div", {
+  }, "Next Card \u2192") : /*#__PURE__*/React.createElement("button", {
+    onClick: addSheetToBatch8,
+    disabled: !canAddSheet,
+    style: {
+      flex: 1,
+      background: canAddSheet ? K : "#ddd",
+      color: canAddSheet ? W : "#aaa",
+      border: "none",
+      padding: "12px",
+      fontWeight: 800,
+      fontSize: 12,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      cursor: canAddSheet ? "pointer" : "not-allowed",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, "Add to Batch"))), /*#__PURE__*/React.createElement("div", {
     className: "preview-pane"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1647,7 +1729,145 @@ function App() {
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
     fit: true
-  }))))))), view === "library" && /*#__PURE__*/React.createElement("div", {
+  })))))), tab8x4 === "batch" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      padding: 16
+    }
+  }, batch8x4.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "60vh",
+      color: "#bbb"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 42
+    }
+  }, "\uD83D\uDDC2\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: 3,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 8
+    }
+  }, "NO SHEETS YET"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab8x4("editor"),
+    style: {
+      marginTop: 16,
+      background: K,
+      color: W,
+      border: "none",
+      padding: "10px 24px",
+      fontWeight: 800,
+      fontSize: 12,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "+ New Sheet")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: 2,
+      color: "#666",
+      textTransform: "uppercase",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, batch8x4.length, " sheet", batch8x4.length !== 1 ? "s" : "", " in batch"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab8x4("editor"),
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "8px 18px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "+ New Sheet")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 20
+    }
+  }, batch8x4.map((sheet, si) => /*#__PURE__*/React.createElement("div", {
+    key: si,
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: W,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+      overflow: "hidden",
+      width: 420 * 0.38
+    }
+  }, sheet.map((card, ci) => /*#__PURE__*/React.createElement("div", {
+    key: ci,
+    style: {
+      height: 148 * 0.38,
+      overflow: "hidden",
+      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
+    card: card,
+    fit: true
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      width: 420 * 0.38
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "ab",
+    onClick: () => startEditSheet8(si),
+    style: {
+      flex: 1,
+      background: K,
+      color: W
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    className: "ab",
+    onClick: () => dupeSheet8(si),
+    style: {
+      flex: 1,
+      background: Y,
+      color: K
+    }
+  }, "Dupe"), /*#__PURE__*/React.createElement("button", {
+    className: "ab",
+    onClick: () => delSheet8(si),
+    style: {
+      flex: 1,
+      background: "#c0392b",
+      color: W
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#888",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Sheet ", si + 1)))))))), view === "library" && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -1768,7 +1988,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginTop: 2
     }
-  }, entry.type === "a4" ? `A4 · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : "8×4 · 4 cards", " \xB7 ", entry.savedAt)), /*#__PURE__*/React.createElement("div", {
+  }, entry.type === "a4" ? `A4 · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `8×4 · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
