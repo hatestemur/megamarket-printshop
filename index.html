@@ -105,7 +105,7 @@ function PriceCard({
     style: {
       fontFamily: FONT,
       fontWeight: 500,
-      fontSize: 34,
+      fontSize: (card.productName || "").length > 30 ? 22 : (card.productName || "").length > 20 ? 27 : 34,
       lineHeight: 1.25,
       color: "#000",
       letterSpacing: "-0.01em"
@@ -755,29 +755,35 @@ function App() {
         CH = 594,
         sideW = 92,
         badgeH = 100;
+      const a4PriceSVG = card => {
+        if (card.priceMode === "multibuy") {
+          const tiers = (card.tiers || []).filter(t => t && t.trim());
+          const n = tiers.length || 1;
+          const lastFs = n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42;
+          const smallFs = n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22;
+          const ys = [];
+          let acc = 0;
+          tiers.forEach((_, i) => {
+            const fs = i === n - 1 ? lastFs : smallFs;
+            ys.push(acc + fs * 0.78);
+            acc += fs * 1.25;
+          });
+          const startY = 494 - 14 - acc;
+          return tiers.map((tier, i) => '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + (i === n - 1 ? lastFs : smallFs) + '" letter-spacing="-0.5">' + tier + '</text>').join("");
+        }
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="360" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="34" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
+        const nowLine = '<text x="' + (CW - 18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + card.nowPrice + '</text>';
+        const unitLine = card.unitPrice ? '<text x="' + (CW - 18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : "";
+        return wasLine + nowLine + unitLine;
+      };
       const cardSVGs = cards.map(card => {
         const badge = "SPECIAL OFFER";
         const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-        return `<div class="card">
-          <svg width="210mm" height="297mm" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
-            <rect width="${CW}" height="${CH}" fill="white"/>
-            <rect x="0" y="0" width="${sideW}" height="${CH}" fill="black"/>
-            <g transform="scale(${(sideW / 607.7).toFixed(5)})"><path d="${logoPath}" fill="#FEDE00"/></g>
-            <foreignObject x="${sideW + 18}" y="14" width="${CW - sideW - 26}" height="230">
-              <div xmlns="http://www.w3.org/1999/xhtml">
-                <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:34px;line-height:1.25;color:#000;letter-spacing:-0.01em">${card.productName}</div>
-                ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:17px;color:#000;margin-top:6px">${card.size}</div>` : ""}
-              </div>
-            </foreignObject>
-            ${card.wasPrice && card.priceMode === "wasnow" ? `<foreignObject x="${sideW + 18}" y="330" width="${CW - sideW - 36}" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:34px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1;padding-right:18px">${card.wasPrice}</div></foreignObject>` : ""}
-            <text x="${CW - 18}" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">${card.nowPrice}</text>
-            ${card.unitPrice ? `<text x="${CW - 18}" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">${card.unitPrice}</text>` : ""}
-            <rect x="0" y="${CH - badgeH}" width="${CW}" height="${badgeH}" fill="#CC2222"/>
-            <foreignObject x="0" y="${CH - badgeH}" width="${CW}" height="${badgeH}">
-              <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'MadaniArabic',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;letter-spacing:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden">${badge}</div>
-            </foreignObject>
-          </svg>
-        </div>`;
+        const nameLen = (card.productName || "").length;
+        const nameFontSize = nameLen > 30 ? 22 : nameLen > 20 ? 27 : 34;
+        const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+        const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
+        return '<div class="card">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + '</svg></div>';
       }).join("");
       html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
         @page{size:A4 portrait;margin:0}
@@ -819,7 +825,7 @@ function App() {
               ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:10px;color:#555;margin-top:2px">${card.size}</div>` : ""}
             </div>
           </foreignObject>
-          ${card.wasPrice ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 64}" width="${CARD_W - sideW - 20}" height="18"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
+          ${card.wasPrice && card.priceMode === "wasnow" ? `<foreignObject x="${xStart + sideW + 12}" y="${yOffset + 64}" width="${CARD_W - sideW - 20}" height="18"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">${card.wasPrice}</div></foreignObject>` : ""}
           <text x="${CW - 14}" y="${yOffset + 112}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">${card.nowPrice}</text>
           ${card.unitPrice ? `<text x="${CW - 14}" y="${yOffset + 126}" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">${card.unitPrice}</text>` : ""}`;
       };
@@ -855,9 +861,9 @@ function App() {
         try {
           document.body.removeChild(iframe);
         } catch (e) {}
+        showToast("Exported & saved to library ✓ — working area cleared");
         clearCurrent();
-        showToast("Exported & saved to library ✓");
-      }, 2000);
+      }, 1500);
     }, 500);
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `
@@ -1491,23 +1497,38 @@ function App() {
     style: {
       display: "flex"
     }
-  }, [0, 1, 2, 3].map((i, _, arr) => /*#__PURE__*/React.createElement("button", {
-    key: i,
-    onClick: () => setEditIdx8x4(i),
-    style: {
-      flex: 1,
-      padding: "8px 0",
-      cursor: "pointer",
-      background: editIdx8x4 === i ? Y : "#f0f0f0",
-      color: editIdx8x4 === i ? K : "#555",
-      border: "2px solid #e0e0e0",
-      borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
-      fontWeight: 700,
-      fontSize: 11,
-      fontFamily: "system-ui, sans-serif",
-      borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0"
-    }
-  }, "Card ", i + 1)))), /*#__PURE__*/React.createElement("div", {
+  }, [0, 1, 2, 3].map(i => {
+    var _cards8x4$i;
+    return /*#__PURE__*/React.createElement("button", {
+      key: i,
+      onClick: () => setEditIdx8x4(i),
+      style: {
+        flex: 1,
+        padding: "8px 0",
+        cursor: "pointer",
+        position: "relative",
+        background: editIdx8x4 === i ? Y : "#f0f0f0",
+        color: editIdx8x4 === i ? K : "#555",
+        border: "2px solid #e0e0e0",
+        borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+        fontWeight: 700,
+        fontSize: 11,
+        fontFamily: "system-ui, sans-serif",
+        borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+      }
+    }, "Card ", i + 1, ((_cards8x4$i = cards8x4[i]) === null || _cards8x4$i === void 0 ? void 0 : _cards8x4$i.productName) && /*#__PURE__*/React.createElement("span", {
+      style: {
+        position: "absolute",
+        top: 3,
+        right: 4,
+        width: 5,
+        height: 5,
+        borderRadius: "50%",
+        background: editIdx8x4 === i ? K : "#4caf50",
+        display: "inline-block"
+      }
+    }));
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 13
     }
