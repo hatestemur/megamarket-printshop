@@ -444,33 +444,45 @@ function App() {
   const [form, setForm] = useState({
     ...EMPTY
   });
-  const [cards, setCards] = useState([{
-    productName: "Cypressa Extra Virgin Olive Oil",
-    size: "5000ml",
-    wasPrice: "29.99",
-    nowPrice: "29.99",
-    unitPrice: "60p per 100ml",
-    badgeText: "SPECIAL OFFER",
-    badgeBg: R,
-    badgeFg: K,
-    priceMode: "single",
-    tiers: ["", ""]
-  }]);
+  const [cards, setCards] = useState(() => {
+    try {
+      const s = localStorage.getItem('megamarket_cards_a4');
+      if (s) return JSON.parse(s);
+    } catch (e) {}
+    return [{
+      productName: "Cypressa Extra Virgin Olive Oil",
+      size: "5000ml",
+      wasPrice: "29.99",
+      nowPrice: "29.99",
+      unitPrice: "60p per 100ml",
+      badgeText: "SPECIAL OFFER",
+      badgeBg: R,
+      badgeFg: K,
+      priceMode: "single",
+      tiers: ["", ""]
+    }];
+  });
   const [editIdx, setEditIdx] = useState(null);
   const [tab, setTab] = useState("editor");
   const [template, setTemplate] = useState("a4");
-  const [cards8x4, setCards8x4] = useState(() => [0, 1, 2, 3].map(() => ({
-    productName: "",
-    size: "",
-    wasPrice: "",
-    nowPrice: "",
-    unitPrice: "",
-    badgeText: "SPECIAL OFFER",
-    badgeBg: R,
-    badgeFg: K,
-    priceMode: "single",
-    tiers: ["", ""]
-  })));
+  const [cards8x4, setCards8x4] = useState(() => {
+    try {
+      const s = localStorage.getItem('megamarket_cards_8x4');
+      if (s) return JSON.parse(s);
+    } catch (e) {}
+    return [0, 1, 2, 3].map(() => ({
+      productName: "",
+      size: "",
+      wasPrice: "",
+      nowPrice: "",
+      unitPrice: "",
+      badgeText: "SPECIAL OFFER",
+      badgeBg: R,
+      badgeFg: K,
+      priceMode: "single",
+      tiers: ["", ""]
+    }));
+  });
   const [editIdx8x4, setEditIdx8x4] = useState(0);
   const set = (k, v) => setForm(f => ({
     ...f,
@@ -516,6 +528,20 @@ function App() {
   const card8 = cards8x4[editIdx8x4];
   const canSave8 = card8.productName && (card8.priceMode === "multibuy" ? card8.tiers.some(t => t.trim()) : card8.priceMode === "wasnow" ? card8.wasPrice && card8.nowPrice : card8.nowPrice);
   const canSave = form.productName && (form.priceMode === "multibuy" ? form.tiers.some(t => t.trim()) : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
+
+  // Persist cards to localStorage
+  const STORAGE_KEY_A4 = "megamarket_cards_a4";
+  const STORAGE_KEY_8X4 = "megamarket_cards_8x4";
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_A4, JSON.stringify(cards));
+    } catch (e) {}
+  }, [cards]);
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_8X4, JSON.stringify(cards8x4));
+    } catch (e) {}
+  }, [cards8x4]);
   const save = () => {
     if (!canSave) return;
     if (editIdx !== null) {
@@ -563,8 +589,6 @@ function App() {
       const cardSVGs = cards.map(card => {
         const badge = "SPECIAL OFFER";
         const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-        const nameLen = (card.productName || "").length;
-        const nameFontSize = nameLen > 22 ? 20 : nameLen > 14 ? 24 : 28;
         return `<div class="card">
           <svg width="210mm" height="297mm" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg">
             <rect width="${CW}" height="${CH}" fill="white"/>
@@ -572,11 +596,11 @@ function App() {
             <g transform="scale(${(sideW / 607.7).toFixed(5)})"><path d="${logoPath}" fill="#FEDE00"/></g>
             <foreignObject x="${sideW + 18}" y="14" width="${CW - sideW - 26}" height="230">
               <div xmlns="http://www.w3.org/1999/xhtml">
-                <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:${nameFontSize}px;line-height:1.25;color:#000;letter-spacing:-0.01em">${card.productName}</div>
+                <div style="font-family:'MadaniArabic',sans-serif;font-weight:500;font-size:34px;line-height:1.25;color:#000;letter-spacing:-0.01em">${card.productName}</div>
                 ${card.size ? `<div style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:17px;color:#000;margin-top:6px">${card.size}</div>` : ""}
               </div>
             </foreignObject>
-            ${card.wasPrice ? `<foreignObject x="${sideW + 18}" y="330" width="${CW - sideW - 36}" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:34px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1;padding-right:18px">${card.wasPrice}</div></foreignObject>` : ""}
+            ${card.wasPrice && card.priceMode === "wasnow" ? `<foreignObject x="${sideW + 18}" y="330" width="${CW - sideW - 36}" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:'MadaniArabic',sans-serif;font-weight:400;font-size:34px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1;padding-right:18px">${card.wasPrice}</div></foreignObject>` : ""}
             <text x="${CW - 18}" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">${card.nowPrice}</text>
             ${card.unitPrice ? `<text x="${CW - 18}" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">${card.unitPrice}</text>` : ""}
             <rect x="0" y="${CH - badgeH}" width="${CW}" height="${badgeH}" fill="#CC2222"/>
@@ -728,7 +752,7 @@ function App() {
       color: "#666",
       fontSize: 12
     }
-  }, template === "8x4" ? "3-up · 8×4" : `${cards.length} card${cards.length !== 1 ? "s" : ""}`), /*#__PURE__*/React.createElement("div", {
+  }, template === "8x4" ? "4-up · 8×4" : `${cards.length} card${cards.length !== 1 ? "s" : ""}`), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -747,7 +771,7 @@ function App() {
       fontSize: 12,
       letterSpacing: 2,
       textTransform: "uppercase",
-      cursor: cards.length ? "pointer" : "not-allowed",
+      cursor: template === "8x4" || cards.length ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
   }, /*#__PURE__*/React.createElement("span", {
