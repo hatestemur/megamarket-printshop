@@ -49,11 +49,21 @@ function calcUnitPrice(size, price) {
   if (!size || !price) return "";
   let priceVal = 0;
   const pMatch = price.match(/^(\d+\.?\d*)\s*p$/i);
-  const gbpMatch = price.match(/£?(\d+\.?\d+)/);
+  const gbpMatch = price.match(/\u00a3?(\d+\.?\d+)/);
   if (pMatch) priceVal = parseFloat(pMatch[1]) / 100;else if (gbpMatch) priceVal = parseFloat(gbpMatch[1]);
   if (!priceVal) return "";
   const s = size.toLowerCase().trim();
-  // Pack-only: "12 pack", "pack of 6", "6pk", "x12"
+  // Multipack with unit: "6x330ml", "4 x 500g" → price per item
+  const multipackM = s.match(/^(\d+\.?\d*)\s*[x\u00d7]\s*(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
+  if (multipackM) {
+    const n = parseFloat(multipackM[1]);
+    if (!n) return "";
+    const perItem = priceVal / n;
+    const pence = perItem * 100;
+    if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
+    return "\u00a3" + perItem.toFixed(2) + " each";
+  }
+  // Pack-only: "12 pack", "pack of 6", "6pk", "x12", "24 cans"
   const packOnly = s.match(/^(\d+)\s*(pack|pk|pcs?|pieces?|count|ct|cans?|bottles?|bags?|tins?|rolls?|sheets?|tabs?|tablets?|caps?|capsules?|sachets?|pods?|wipes?)$/i) || s.match(/^pack\s+of\s+(\d+)$/i) || s.match(/^x\s*(\d+)$/i);
   if (packOnly) {
     const n = parseInt(packOnly[1]);
@@ -63,19 +73,11 @@ function calcUnitPrice(size, price) {
     if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
     return "\u00a3" + perItem.toFixed(2) + " each";
   }
-  // Weight/volume: 6x330ml, 4 x 500g, 500g, 1kg, 2L
-  let qty = 0,
-    unit = "";
-  const packM = s.match(/(\d+\.?\d*)\s*[xX\u00d7]\s*(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
+  // Single item with weight/volume: "500g", "1kg", "750ml" → per 100g/ml
   const singleM = s.match(/(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
-  if (packM) {
-    qty = parseFloat(packM[1]) * parseFloat(packM[2]);
-    unit = packM[3];
-  } else if (singleM) {
-    qty = parseFloat(singleM[1]);
-    unit = singleM[2];
-  } else return "";
-  unit = unit.toLowerCase();
+  if (!singleM) return "";
+  let qty = parseFloat(singleM[1]);
+  let unit = singleM[2].toLowerCase();
   if (unit === "kg") {
     qty *= 1000;
     unit = "g";
