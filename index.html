@@ -310,7 +310,7 @@ function PriceCard({
     style: {
       fontFamily: FONT,
       fontWeight: 400,
-      fontSize: 34,
+      fontSize: 30,
       color: "#000",
       textDecoration: "line-through",
       textDecorationColor: "#000",
@@ -1191,7 +1191,7 @@ function App() {
             return '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 18) + '" y="' + (startY + ys[i] + Math.round(lastFs * 0.28) + 18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + each + '</text>' : '');
           }).join("");
         }
-        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="34" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
         const nowLine = '<text x="' + (CW - 18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + card.nowPrice + '</text>';
         const unitLine = card.unitPrice ? '<text x="' + (CW - 18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : "";
         return wasLine + nowLine + unitLine;
