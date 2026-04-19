@@ -18,6 +18,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 </head>
@@ -34,6 +35,55 @@
           }); } catch(e) {} });
         return rules.join('\n');
       } catch(e) { return ''; } };
+/* ─── PDF download helper ───────────────────────────── */
+async function downloadPDF(cardSVGs, filename) {
+  // cardSVGs: array of { svgString, widthMm, heightMm }
+  if (!window.jspdf) {
+    alert("PDF library not loaded yet — please wait a moment and try again.");
+    return;
+  }
+  const {
+    jsPDF
+  } = window.jspdf;
+  const pdf = new jsPDF({
+    unit: "mm",
+    format: "a4",
+    orientation: "portrait"
+  });
+  for (let i = 0; i < cardSVGs.length; i++) {
+    if (i > 0) pdf.addPage("a4", "portrait");
+    const {
+      svgString,
+      widthMm,
+      heightMm
+    } = cardSVGs[i];
+    // Rasterise SVG via canvas
+    const scale = 3; // 3x resolution for crisp output
+    const pxW = Math.round(widthMm * 3.7795275591 * scale);
+    const pxH = Math.round(heightMm * 3.7795275591 * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = pxW;
+    canvas.height = pxH;
+    const ctx = canvas.getContext("2d");
+    const blob = new Blob([svgString], {
+      type: "image/svg+xml"
+    });
+    const url = URL.createObjectURL(blob);
+    await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, pxW, pxH);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, widthMm, heightMm);
+  }
+  pdf.save(filename);
+}
+
 /* ─── Price formatting ───────────────────────────── */
 function formatPrice(v) {
   if (!v) return v;
@@ -950,6 +1000,104 @@ function App() {
       });
     });
   };
+  const exportPDF = async () => {
+    const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
+    const fontStyle = Array.from(document.styleSheets).flatMap(s => {
+      try {
+        return Array.from(s.cssRules).filter(r => r.type === CSSRule.FONT_FACE_RULE).map(r => r.cssText);
+      } catch (e) {
+        return [];
+      }
+    }).join("\n");
+    if (template === "a4") {
+      const CW = 420,
+        CH = 594,
+        sideW = 92,
+        badgeH = 100;
+      const pages = (cards.length ? cards : [form]).map(card => {
+        const badge = "SPECIAL OFFER";
+        const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
+        const nameLen = (card.productName || "").length;
+        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
+        const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+        const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
+        const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<defs><style>' + fontStyle + '</style></defs>' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + (card.productName || "") + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + '</svg>';
+        return {
+          svgString,
+          widthMm: 210,
+          heightMm: 297
+        };
+      });
+      saveToLibrary();
+      await downloadPDF(pages, "megamarket-a4-" + Date.now() + ".pdf");
+      clearCurrent();
+      showToast("PDF downloaded & saved to library ✓");
+    } else {
+      const CW = 420,
+        CH = 148,
+        sideW = 64,
+        CARD_W = 304,
+        xStart = CW - CARD_W;
+      const sheets = batch8x4.length ? batch8x4 : [cards8x4];
+      const pages = sheets.map(sheet => {
+        const svgRows = sheet.map((card, ci) => {
+          const badge = "SPECIAL OFFER";
+          const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (Math.max(...badge.split(" ").map(w => w.length)) * 0.62))));
+          const logoBotR = Math.round(800 * sideW / 607.7);
+          const scaleX = (sideW / 607.7).toFixed(5);
+          const yo = ci * CH;
+          const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 14) + '" y="' + (yo + 79) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="15" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+          const tiers = (card.tiers || []).filter(t => t && t.trim());
+          let priceLines = '';
+          if (card.priceMode === "multibuy" && tiers.length) {
+            const n = tiers.length,
+              lastFs = n === 1 ? 40 : n === 2 ? 34 : n === 3 ? 26 : 20,
+              smallFs = n === 1 ? 40 : n === 2 ? 20 : n === 3 ? 15 : 12;
+            const ys = [];
+            let acc = 0;
+            tiers.forEach((_, i) => {
+              const fs = i === n - 1 ? lastFs : smallFs;
+              ys.push(acc + fs * 0.78);
+              acc += fs * 1.3;
+            });
+            const startY = yo + 130 - acc;
+            priceLines = tiers.map((tier, i) => {
+              const fs = i === n - 1 ? lastFs : smallFs;
+              const each = parseTierEach(tier);
+              return '<text x="' + (CW - 14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 14) + '" y="' + (startY + ys[i] + Math.round(fs * 0.28) + 18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>' : '');
+            }).join('');
+          } else {
+            priceLines = wasLine + '<text x="' + (CW - 14) + '" y="' + (yo + 116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || "") + '</text>' + (card.unitPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '');
+          }
+          return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + (CH - logoBotR) + '" fill="#CC2222"/>' + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 20) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="17">' + (card.productName || "") + '</text>' + (card.size ? '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 34) + '" fill="#555" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') + priceLines + (ci < 3 ? '<line x1="' + xStart + '" y1="' + (ci + 1) * CH + '" x2="' + CW + '" y2="' + (ci + 1) * CH + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
+        }).join('');
+        const svgString = '<svg width="' + CW + '" height="' + CH * 4 + '" viewBox="0 0 ' + CW + ' ' + CH * 4 + '" xmlns="http://www.w3.org/2000/svg">' + '<defs><style>' + fontStyle + '</style></defs>' + '<rect width="' + xStart + '" height="' + CH * 4 + '" fill="white"/>' + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + CH * 4 + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' + svgRows + '</svg>';
+        return {
+          svgString,
+          widthMm: 210,
+          heightMm: 297
+        };
+      });
+      saveToLibrary();
+      await downloadPDF(pages, "megamarket-8x4-" + Date.now() + ".pdf");
+      setCards8x4([0, 1, 2, 3].map(() => ({
+        productName: "",
+        size: "",
+        wasPrice: "",
+        nowPrice: "",
+        unitPrice: "",
+        badgeText: "SPECIAL OFFER",
+        badgeBg: R,
+        badgeFg: K,
+        priceMode: "single",
+        tiers: ["", ""]
+      })));
+      setBatch8x4([]);
+      setEditIdx8x4(0);
+      setTab8x4("editor");
+      showToast("PDF downloaded & saved to library ✓");
+    }
+  };
   const startEdit = i => {
     setForm({
       ...cards[i]
@@ -1615,10 +1763,7 @@ function App() {
       gap: 3
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      saveToLibrary();
-      print();
-    },
+    onClick: () => exportPDF(),
     disabled: template === "a4" ? !cards.length : false,
     style: {
       background: (template === "a4" ? cards.length : true) ? Y : "#333",
@@ -1691,10 +1836,7 @@ function App() {
   }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => {
-        saveToLibrary();
-        print();
-      }, 50);
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -1712,10 +1854,7 @@ function App() {
   }, "\u2399 A4 (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => {
-        saveToLibrary();
-        print();
-      }, 50);
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
