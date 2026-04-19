@@ -206,7 +206,7 @@ function PriceCard({
     const n = activeTiers.length || 1;
     const maxTextLen = Math.max(...activeTiers.map(t => t.length), 1);
     const availW = CW - 18 - sideW - 20; // 290px
-    const maxFsByWidth = Math.floor(availW / (maxTextLen * 0.65));
+    const maxFsByWidth = Math.floor(availW / (maxTextLen * 0.55));
     const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, maxFsByWidth);
     const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(maxFsByWidth * 0.7));
     const ys = [];
@@ -896,7 +896,7 @@ function App() {
           const n = tiers.length || 1;
           const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
           const availW = CW - 18 - sideW - 20;
-          const capFs = Math.floor(availW / (maxTierLen * 0.65));
+          const capFs = Math.floor(availW / (maxTierLen * 0.55));
           const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
           const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
           const ys = [];
