@@ -482,7 +482,7 @@ function PriceCard8x4({
     x: xStart + sideW + 12,
     y: 5,
     width: CARD_W - sideW - 20,
-    height: card.priceMode === "multibuy" ? 26 : 56
+    height: card.priceMode === "multibuy" ? 42 : 56
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml"
   }, /*#__PURE__*/React.createElement("div", {
@@ -532,12 +532,12 @@ function PriceCard8x4({
     const startY = tierAnchorY - acc;
     return /*#__PURE__*/React.createElement(React.Fragment, null, card.nowPrice && /*#__PURE__*/React.createElement("text", {
       x: CW - 14,
-      y: startY - 6,
+      y: startY - 8,
       textAnchor: "end",
-      fill: "#555",
+      fill: "#000",
       fontFamily: FONT,
       fontWeight: "400",
-      fontSize: "10"
+      fontSize: "14"
     }, card.nowPrice), activeTiers.map((tier, i) => {
       const each = parseTierEach(tier);
       const fs = i === n - 1 ? lastFs : smallFs;
@@ -1077,7 +1077,8 @@ function App() {
             });
             const blockH = acc;
             const startY = yo + 112 - acc;
-            priceLines = tiers.map((tier, i) => {
+            const nowRef8p = card.nowPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 112 - acc - 8) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="14">' + card.nowPrice + '</text>' : '';
+            priceLines = nowRef8p + tiers.map((tier, i) => {
               const fs = i === n - 1 ? lastFs : smallFs;
               const each = parseTierEach(tier);
               return '<text x="' + (CW - 14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (i === tiers.length - 1 && each ? '<text x="' + (CW - 14) + '" y="' + (yo + 126) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>' : '');
@@ -1085,7 +1086,7 @@ function App() {
           } else {
             priceLines = wasLine + '<text x="' + (CW - 14) + '" y="' + (yo + 116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || "") + '</text>' + (card.unitPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '');
           }
-          return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + (CH - logoBotR) + '" fill="#CC2222"/>' + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 20) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="17">' + (card.productName || "") + '</text>' + (card.size ? '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 34) + '" fill="#555" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') + priceLines + (ci < 3 ? '<line x1="' + xStart + '" y1="' + (ci + 1) * CH + '" x2="' + CW + '" y2="' + (ci + 1) * CH + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
+          return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + (CH - logoBotR) + '" fill="#CC2222"/>' + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 20) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="17">' + (card.productName || "") + '</text>' + (card.size ? '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 34) + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') + priceLines + (ci < 3 ? '<line x1="' + xStart + '" y1="' + (ci + 1) * CH + '" x2="' + CW + '" y2="' + (ci + 1) * CH + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
         }).join('');
         const svgString = '<svg width="' + CW + '" height="' + CH * 4 + '" viewBox="0 0 ' + CW + ' ' + CH * 4 + '" xmlns="http://www.w3.org/2000/svg">' + '<defs><style>' + fontStyle + '</style></defs>' + '<rect width="' + xStart + '" height="' + CH * 4 + '" fill="white"/>' + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + CH * 4 + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' + svgRows + '</svg>';
         return {
