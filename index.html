@@ -1487,11 +1487,7 @@ function App() {
     },
     title: "Unsaved changes"
   }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (view === "library") setView("editor");else {
-        setLandingDone(false);
-      }
-    },
+    onClick: () => setView(view === "library" ? "editor" : "library"),
     style: {
       background: view === "library" ? Y : "rgba(255,255,255,0.12)",
       color: view === "library" ? K : W,
