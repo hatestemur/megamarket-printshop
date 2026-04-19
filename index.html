@@ -1743,7 +1743,10 @@ function App() {
     },
     title: "Unsaved changes"
   }), (cards.length > 0 || batch8x4.length > 0) && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowQueue(q => !q),
+    onClick: () => {
+      setShowQueue(q => !q);
+      if (view === "library") setView("editor");
+    },
     style: {
       background: showQueue ? Y : "rgba(255,255,255,0.12)",
       color: showQueue ? K : W,
@@ -1757,7 +1760,10 @@ function App() {
       fontFamily: "system-ui, sans-serif"
     }
   }, "\u2295 Queue (", cards.length + batch8x4.length, ")"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setView(view === "library" ? "editor" : "library"),
+    onClick: () => {
+      setView(view === "library" ? "editor" : "library");
+      setShowQueue(false);
+    },
     style: {
       background: view === "library" ? Y : "rgba(255,255,255,0.12)",
       color: view === "library" ? K : W,
@@ -1770,7 +1776,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
-  }, view === "library" ? "← Editor" : view === "editor" ? `Library${library.length ? " (" + library.length + ")" : ""}` : "Library"), view === "editor" && /*#__PURE__*/React.createElement("div", {
+  }, view === "library" ? "← Editor" : view === "editor" ? `Library${library.length ? " (" + library.length + ")" : ""}` : "Library"), (view === "editor" || showQueue) && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
