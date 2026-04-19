@@ -44,6 +44,22 @@ function formatPrice(v) {
   return "£" + stripped;
 }
 
+/* ─── Parse per-item price from a tier string ────── */
+function parseTierEach(tier) {
+  // Matches: "2 for £3.00", "3 for 99p", "buy 2 get 1 free" (skip), "£2 each" etc.
+  const m = tier.match(/(\d+)\s+for\s+£?(\d+\.?\d*)/i) || tier.match(/(\d+)\s+for\s+(\d+\.?\d*)\s*p/i);
+  if (!m) return "";
+  const qty = parseInt(m[1]);
+  // detect pence format
+  const isPence = /for\s+\d+\.?\d*\s*p/i.test(tier);
+  const total = isPence ? parseFloat(m[2]) / 100 : parseFloat(m[2]);
+  if (!qty || !total) return "";
+  const each = total / qty;
+  const pence = each * 100;
+  if (pence < 100) return "(" + Math.round(pence * 10) / 10 + "p each)";
+  return "(£" + each.toFixed(2) + " each)";
+}
+
 /* ─── Unit price auto-calculator ─────────────────── */
 function calcUnitPrice(size, price) {
   if (!size || !price) return "";
@@ -199,17 +215,30 @@ function PriceCard({
       acc += fs * 1.25;
     });
     const startY = 494 - 14 - acc;
-    return activeTiers.map((tier, i) => /*#__PURE__*/React.createElement("text", {
-      key: i,
-      x: CW - 18,
-      y: startY + ys[i],
-      textAnchor: "end",
-      fill: "#000",
-      fontFamily: FONT,
-      fontWeight: "700",
-      fontSize: i === n - 1 ? lastFs : smallFs,
-      letterSpacing: "-0.5"
-    }, tier));
+    return activeTiers.map((tier, i) => {
+      const each = parseTierEach(tier);
+      const fs = i === n - 1 ? lastFs : smallFs;
+      return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: i
+      }, /*#__PURE__*/React.createElement("text", {
+        x: CW - 18,
+        y: startY + ys[i],
+        textAnchor: "end",
+        fill: "#000",
+        fontFamily: FONT,
+        fontWeight: "700",
+        fontSize: fs,
+        letterSpacing: "-0.5"
+      }, tier), each && /*#__PURE__*/React.createElement("text", {
+        x: CW - 18,
+        y: startY + ys[i] + fs * 0.35,
+        textAnchor: "end",
+        fill: "#888",
+        fontFamily: FONT,
+        fontWeight: "400",
+        fontSize: Math.max(14, fs * 0.38)
+      }, each));
+    });
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: sideW + 18,
     y: 330,
@@ -431,17 +460,30 @@ function PriceCard8x4({
       acc += fs * 1.3;
     });
     const startY = 128 - acc;
-    return activeTiers.map((tier, i) => /*#__PURE__*/React.createElement("text", {
-      key: i,
-      x: CW - 14,
-      y: startY + ys[i],
-      textAnchor: "end",
-      fill: "#000",
-      fontFamily: FONT,
-      fontWeight: "700",
-      fontSize: i === n - 1 ? lastFs : smallFs,
-      letterSpacing: "-0.5"
-    }, tier));
+    return activeTiers.map((tier, i) => {
+      const each = parseTierEach(tier);
+      const fs = i === n - 1 ? lastFs : smallFs;
+      return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: i
+      }, /*#__PURE__*/React.createElement("text", {
+        x: CW - 14,
+        y: startY + ys[i],
+        textAnchor: "end",
+        fill: "#000",
+        fontFamily: FONT,
+        fontWeight: "700",
+        fontSize: fs,
+        letterSpacing: "-0.5"
+      }, tier), each && /*#__PURE__*/React.createElement("text", {
+        x: CW - 14,
+        y: startY + ys[i] + fs * 0.38,
+        textAnchor: "end",
+        fill: "#888",
+        fontFamily: FONT,
+        fontWeight: "400",
+        fontSize: Math.max(8, fs * 0.4)
+      }, each));
+    });
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: xStart + sideW + 12,
     y: 64,
@@ -845,7 +887,13 @@ function App() {
             acc += fs * 1.25;
           });
           const startY = 494 - 14 - acc;
-          return tiers.map((tier, i) => '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + (i === n - 1 ? lastFs : smallFs) + '" letter-spacing="-0.5">' + tier + '</text>').join("");
+          return tiers.map((tier, i) => {
+            const fs = i === n - 1 ? lastFs : smallFs;
+            const each = parseTierEach(tier);
+            const eachY = startY + ys[i] + Math.round(fs * 0.35);
+            const eachFs = Math.max(14, Math.round(fs * 0.38));
+            return '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 18) + '" y="' + eachY + '" text-anchor="end" fill="#888" font-family="MadaniArabic" font-weight="400" font-size="' + eachFs + '">' + each + '</text>' : '');
+          }).join("");
         }
         const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="360" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="34" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
         const nowLine = '<text x="' + (CW - 18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + card.nowPrice + '</text>';
