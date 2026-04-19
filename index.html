@@ -56,8 +56,8 @@ function parseTierEach(tier) {
   if (!qty || !total) return "";
   const each = total / qty;
   const pence = each * 100;
-  if (pence < 100) return "(" + Math.round(pence * 10) / 10 + "p each)";
-  return "(£" + each.toFixed(2) + " each)";
+  if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
+  return "£" + each.toFixed(2) + " each";
 }
 
 /* ─── Unit price auto-calculator ─────────────────── */
