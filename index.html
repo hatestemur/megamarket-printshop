@@ -614,7 +614,14 @@ function App() {
     return [];
   });
   const [tab8x4, setTab8x4] = useState("editor");
-  const [view, setView] = useState("editor"); // "editor" | "library"
+  const [view, setView] = useState("editor"); // "editor" | "library" | "landing"
+  const [landingDone, setLandingDone] = useState(() => {
+    try {
+      return !!localStorage.getItem("mm_template_chosen");
+    } catch (e) {
+      return false;
+    }
+  });
   const [library, setLibrary] = useState(() => {
     try {
       const s = localStorage.getItem('megamarket_library');
@@ -1051,6 +1058,9 @@ function App() {
           .preview-pane{min-height:260px;padding:16px}
           .mob-toggle{display:flex}
           .hide-mob{display:none}
+        .landing-card{background:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s;border:3px solid transparent}
+        .landing-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.18)}
+        .landing-card.selected{border-color:#FEDE00}
         }
       `), toast && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1071,11 +1081,200 @@ function App() {
       boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       whiteSpace: "nowrap"
     }
-  }, toast), /*#__PURE__*/React.createElement("div", {
+  }, toast), !landingDone && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#111",
+      padding: "24px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "48",
+    height: "63",
+    viewBox: "0 0 607.7 800",
+    xmlns: "http://www.w3.org/2000/svg",
+    style: {
+      marginBottom: 24
+    }
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
+    fill: "#FEDE00"
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: W,
+      fontWeight: 800,
+      fontSize: 28,
+      letterSpacing: 4,
+      fontFamily: "system-ui,sans-serif",
+      marginBottom: 8
+    }
+  }, "PRINTSHOP"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: "#666",
+      fontWeight: 500,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      marginBottom: 48
+    }
+  }, "SELECT A TEMPLATE"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 20,
+      flexWrap: "wrap",
+      justifyContent: "center",
+      width: "100%",
+      maxWidth: 680
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "landing-card",
+    onClick: () => {
+      setTemplate("a4");
+      setLandingDone(true);
+      try {
+        localStorage.setItem("mm_template_chosen", "1");
+      } catch (e) {}
+    },
+    style: {
+      flex: "1 1 280px",
+      maxWidth: 320,
+      padding: 32,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 48,
+      height: 6,
+      background: K,
+      marginBottom: 20
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 22,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      color: K,
+      marginBottom: 8
+    }
+  }, "A4 PORTRAIT"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "#666",
+      fontFamily: "system-ui,sans-serif",
+      lineHeight: 1.6,
+      marginBottom: 24
+    }
+  }, "Full-page price cards. One card per A4 sheet. Large product name and prominent pricing."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, ["Single Price", "Was / Now", "Multi-Buy"].map(t => /*#__PURE__*/React.createElement("span", {
+    key: t,
+    style: {
+      background: "#f0f0f0",
+      color: "#555",
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 1,
+      padding: "4px 8px",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase"
+    }
+  }, t))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "auto",
+      paddingTop: 24,
+      fontWeight: 800,
+      fontSize: 12,
+      letterSpacing: 2,
+      color: K,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "SELECT \u2192")), /*#__PURE__*/React.createElement("div", {
+    className: "landing-card",
+    onClick: () => {
+      setTemplate("8x4");
+      setLandingDone(true);
+      try {
+        localStorage.setItem("mm_template_chosen", "1");
+      } catch (e) {}
+    },
+    style: {
+      flex: "1 1 280px",
+      maxWidth: 320,
+      padding: 32,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 48,
+      height: 6,
+      background: R,
+      marginBottom: 20
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 22,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      color: K,
+      marginBottom: 8
+    }
+  }, "8\xD74 LABEL"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "#666",
+      fontFamily: "system-ui,sans-serif",
+      lineHeight: 1.6,
+      marginBottom: 24
+    }
+  }, "4 shelf-edge labels per A4 sheet. 152\xD774mm each. Right-aligned with perforation cut line."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, ["Single Price", "Was / Now", "Multi-Buy"].map(t => /*#__PURE__*/React.createElement("span", {
+    key: t,
+    style: {
+      background: "#f0f0f0",
+      color: "#555",
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 1,
+      padding: "4px 8px",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase"
+    }
+  }, t))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "auto",
+      paddingTop: 24,
+      fontWeight: 800,
+      fontSize: 12,
+      letterSpacing: 2,
+      color: K,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "SELECT \u2192")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      ...(landingDone ? {} : {
+        display: "none"
+      })
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1110,7 +1309,26 @@ function App() {
       alignItems: "center",
       gap: 8
     }
-  }, hasUnsaved && view === "editor" && /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setLandingDone(false);
+      try {
+        localStorage.removeItem("mm_template_chosen");
+      } catch (e) {}
+    },
+    style: {
+      background: "none",
+      color: "#666",
+      border: "none",
+      padding: "8px 10px",
+      fontWeight: 700,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u229E Templates"), hasUnsaved && view === "editor" && /*#__PURE__*/React.createElement("span", {
     style: {
       width: 7,
       height: 7,
@@ -1121,7 +1339,14 @@ function App() {
     },
     title: "Unsaved changes"
   }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setView(view === "library" ? "editor" : "library"),
+    onClick: () => {
+      if (view === "library") setView("editor");else {
+        setLandingDone(false);
+        try {
+          localStorage.removeItem("mm_template_chosen");
+        } catch (e) {}
+      }
+    },
     style: {
       background: view === "library" ? Y : "#222",
       color: view === "library" ? K : "#aaa",
@@ -1134,7 +1359,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
-  }, view === "library" ? "← Editor" : `Library${library.length ? " (" + library.length + ")" : ""}`), view === "editor" && /*#__PURE__*/React.createElement("div", {
+  }, view === "library" ? "← Editor" : view === "editor" ? `Library${library.length ? " (" + library.length + ")" : ""}` : "Library"), view === "editor" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
