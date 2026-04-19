@@ -37,7 +37,10 @@
 /* ─── Price formatting ───────────────────────────── */
 function formatPrice(v) {
   if (!v) return v;
-  const stripped = v.replace(/^£+/, "");
+  const stripped = v.replace(/^£+/, "").replace(/^p+/i, "");
+  const num = parseFloat(stripped);
+  if (isNaN(num)) return v;
+  if (num < 1) return Math.round(num * 100) + "p";
   return "£" + stripped;
 }
 
