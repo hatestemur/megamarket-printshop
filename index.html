@@ -224,7 +224,7 @@ function PriceCard({
       fill: "#000",
       fontFamily: FONT,
       fontWeight: "400",
-      fontSize: "22"
+      fontSize: "30"
     }, card.nowPrice), activeTiers.map((tier, i) => {
       const each = parseTierEach(tier);
       const fs = i === n - 1 ? lastFs : smallFs;
@@ -907,7 +907,7 @@ function App() {
             acc += fs * 1.25;
           });
           const startY = 494 - 14 - acc;
-          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 20) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="22">' + card.nowPrice + '</text>' : '';
+          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 20) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30">' + card.nowPrice + '</text>' : '';
           return nowRef + tiers.map((tier, i) => {
             const fs = i === n - 1 ? lastFs : smallFs;
             const each = parseTierEach(tier);
