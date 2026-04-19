@@ -1201,7 +1201,8 @@ function App() {
     style: inp,
     placeholder: "e.g. \xA329.99",
     value: form.nowPrice,
-    onChange: e => set("nowPrice", formatPrice(e.target.value))
+    onChange: e => set("nowPrice", e.target.value),
+    onBlur: e => set("nowPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Unit Price"), /*#__PURE__*/React.createElement("input", {
@@ -1222,14 +1223,16 @@ function App() {
     style: inp,
     placeholder: "e.g. \xA334.99",
     value: form.wasPrice,
-    onChange: e => set("wasPrice", formatPrice(e.target.value))
+    onChange: e => set("wasPrice", e.target.value),
+    onBlur: e => set("wasPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Price *"), /*#__PURE__*/React.createElement("input", {
     style: inp,
     placeholder: "e.g. \xA329.99",
     value: form.nowPrice,
-    onChange: e => set("nowPrice", formatPrice(e.target.value))
+    onChange: e => set("nowPrice", e.target.value),
+    onBlur: e => set("nowPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Unit Price"), /*#__PURE__*/React.createElement("input", {
@@ -1656,7 +1659,8 @@ function App() {
     style: inp,
     placeholder: "e.g. \xA329.99",
     value: card8.nowPrice,
-    onChange: e => set8("nowPrice", formatPrice(e.target.value))
+    onChange: e => set8("nowPrice", e.target.value),
+    onBlur: e => set8("nowPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Unit Price"), /*#__PURE__*/React.createElement("input", {
@@ -1684,14 +1688,16 @@ function App() {
     style: inp,
     placeholder: "e.g. \xA334.99",
     value: card8.wasPrice,
-    onChange: e => set8("wasPrice", formatPrice(e.target.value))
+    onChange: e => set8("wasPrice", e.target.value),
+    onBlur: e => set8("wasPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Price *"), /*#__PURE__*/React.createElement("input", {
     style: inp,
     placeholder: "e.g. \xA329.99",
     value: card8.nowPrice,
-    onChange: e => set8("nowPrice", formatPrice(e.target.value))
+    onChange: e => set8("nowPrice", e.target.value),
+    onBlur: e => set8("nowPrice", formatPrice(e.target.value))
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Unit Price"), /*#__PURE__*/React.createElement("input", {
