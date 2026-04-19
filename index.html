@@ -2437,19 +2437,51 @@ function App() {
       background: W,
       padding: "14px 16px",
       display: "flex",
-      alignItems: "center",
+      alignItems: "flex-start",
       gap: 12,
       boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 4,
-      alignSelf: "stretch",
-      background: entry.type === "a4" ? K : R,
-      borderRadius: 2,
-      flexShrink: 0
+      flexShrink: 0,
+      width: 52,
+      height: 74,
+      overflow: "hidden",
+      background: "#f0f0f0",
+      position: "relative",
+      border: "1px solid #e0e0e0"
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  }, entry.type === "a4" && entry.cards[0] && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      transformOrigin: "top left",
+      transform: "scale(0.124)"
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard, {
+    card: entry.cards[0],
+    scale: 1
+  })), entry.type === "8x4" && entry.cards[0] && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      transformOrigin: "top left",
+      transform: "scale(0.175)",
+      width: 420
+    }
+  }, (Array.isArray(entry.cards[0]) ? entry.cards[0] : [entry.cards[0]]).map((card, ci) => /*#__PURE__*/React.createElement("div", {
+    key: ci,
+    style: {
+      height: 148,
+      overflow: "hidden",
+      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
+    card: card,
+    fit: true
+  }))))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minWidth: 0
