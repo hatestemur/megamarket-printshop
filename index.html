@@ -903,27 +903,52 @@ function App() {
     }).join("");
     const css = window._getFontCSS() + "@page{size:A4 portrait;margin:0}" + "*{box-sizing:border-box;margin:0;padding:0}" + "html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + ".page{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}" + ".page:last-child{page-break-after:auto}" + ".page svg{display:block;width:100vw;height:100vh}" + 'svg[viewBox*="592"]{height:auto!important}';
     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + (batch8x4.length > 0 ? sheetPages : "") + (cards.length > 0 ? a4Pages : "") + '</body></html>';
-    const entry = saveToLibrary();
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;";
-    document.body.appendChild(iframe);
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => {
+    const loadHtml2pdf = () => new Promise(res => {
+      if (window.html2pdf) return res();
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      s.onload = res;
+      document.head.appendChild(s);
+    });
+    const pdfContainer = document.createElement('div');
+    pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;';
+    pdfContainer.innerHTML = '<style>.page{page-break-after:always;page-break-inside:avoid}.page:last-child{page-break-after:auto}</style>' + html;
+    document.body.appendChild(pdfContainer);
+    showToast("Generating PDF…");
+    loadHtml2pdf().then(() => {
+      html2pdf().set({
+        margin: 0,
+        filename: 'megamarket-print-queue.pdf',
+        image: {
+          type: 'png',
+          quality: 1
+        },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        },
+        pagebreak: {
+          mode: ['css'],
+          before: '.page'
+        }
+      }).from(pdfContainer).save().then(() => {
         try {
-          document.body.removeChild(iframe);
+          document.body.removeChild(pdfContainer);
         } catch (e) {}
+        saveToLibrary();
         setCards([]);
         setBatch8x4([]);
         setShowQueue(false);
-        showToast("Queue exported & saved to library ✓");
-      }, 1500);
-    }, 500);
+        showToast("Downloaded & saved to library ✓");
+      });
+    });
   };
   const startEdit = i => {
     setForm({
@@ -990,14 +1015,7 @@ function App() {
         const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
         return '<div class="card">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + '</svg></div>';
       }).join("");
-      html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
-        @page{size:A4 portrait;margin:0}
-        *{box-sizing:border-box;margin:0;padding:0}
-        html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        .card{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}
-        .card:last-child{page-break-after:auto}
-        .card svg{display:block;width:100vw;height:100vh}
-      </style></head><body>${cardSVGs}</body></html>`;
+      html = cardSVGs;
     } else {
       // 8×4: 3 cards per A4 sheet with cut guides
       const CW = 420,
@@ -1067,32 +1085,54 @@ function App() {
           ${ci < 3 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
         `).join("")}
       </svg>`;
-      const sheetHTML = printCards8.map((sheet, si) => `<div class="sheet" style="page-break-after:${si < printCards8.length - 1 ? 'always' : 'auto'}">${sheetSVG(sheet)}</div>`).join("");
-      html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${window._getFontCSS()}
-        @page{size:A4 portrait;margin:0}
-        *{box-sizing:border-box;margin:0;padding:0}
-        html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        svg{display:block;width:100vw;height:auto}
-      </style></head><body>${sheetHTML}</body></html>`;
+      const sheetHTML = printCards8.map((sheet, si) => `<div class="sheet">${sheetSVG(sheet)}</div>`).join("");
+      html = sheetHTML;
     }
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;";
-    document.body.appendChild(iframe);
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => {
+    const _loadHtml2pdf = () => new Promise(res => {
+      if (window.html2pdf) return res();
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      s.onload = res;
+      document.head.appendChild(s);
+    });
+    const _pdfEl = document.createElement('div');
+    _pdfEl.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;';
+    _pdfEl.innerHTML = '<style>.card,.sheet{page-break-after:always;page-break-inside:avoid}.card:last-child,.sheet:last-child{page-break-after:auto}.card svg{display:block;width:210mm;height:297mm}.sheet svg{display:block;width:210mm;height:auto}</style>' + html;
+    document.body.appendChild(_pdfEl);
+    const _fname = template === 'a4' ? 'megamarket-price-cards.pdf' : 'megamarket-shelf-labels.pdf';
+    showToast("Generating PDF…");
+    _loadHtml2pdf().then(() => {
+      html2pdf().set({
+        margin: 0,
+        filename: _fname,
+        image: {
+          type: 'png',
+          quality: 1
+        },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        },
+        pagebreak: {
+          mode: ['css'],
+          before: '.card, .sheet'
+        }
+      }).from(_pdfEl).save().then(() => {
         try {
-          document.body.removeChild(iframe);
+          document.body.removeChild(_pdfEl);
         } catch (e) {}
-        showToast("Exported & saved to library ✓ — working area cleared");
+        saveToLibrary();
+        showToast("Downloaded & saved to library ✓ — working area cleared");
         clearCurrent();
-      }, 1500);
-    }, 500);
+      });
+    });
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `
 
