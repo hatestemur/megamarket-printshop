@@ -207,8 +207,8 @@ function PriceCard({
     const maxTextLen = Math.max(...activeTiers.map(t => t.length), 1);
     const availW = CW - 18 - sideW - 20; // 290px
     const maxFsByWidth = Math.floor(availW / (maxTextLen * 0.65));
-    const lastFs = Math.min(n === 1 ? 58 : n === 2 ? 50 : n === 3 ? 42 : 34, maxFsByWidth);
-    const smallFs = Math.min(n === 1 ? 58 : n === 2 ? 30 : n === 3 ? 24 : 18, Math.floor(maxFsByWidth * 0.7));
+    const lastFs = Math.min(n === 1 ? 68 : n === 2 ? 58 : n === 3 ? 48 : 38, maxFsByWidth);
+    const smallFs = Math.min(n === 1 ? 68 : n === 2 ? 34 : n === 3 ? 26 : 20, Math.floor(maxFsByWidth * 0.7));
     const ys = [];
     let acc = 0;
     activeTiers.forEach((_, i) => {
@@ -224,7 +224,7 @@ function PriceCard({
       fill: "#000",
       fontFamily: FONT,
       fontWeight: "400",
-      fontSize: "18"
+      fontSize: "24"
     }, card.nowPrice), activeTiers.map((tier, i) => {
       const each = parseTierEach(tier);
       const fs = i === n - 1 ? lastFs : smallFs;
@@ -897,8 +897,8 @@ function App() {
           const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
           const availW = CW - 18 - sideW - 20;
           const capFs = Math.floor(availW / (maxTierLen * 0.65));
-          const lastFs = Math.min(n === 1 ? 58 : n === 2 ? 50 : n === 3 ? 42 : 34, capFs);
-          const smallFs = Math.min(n === 1 ? 58 : n === 2 ? 30 : n === 3 ? 24 : 18, Math.floor(capFs * 0.7));
+          const lastFs = Math.min(n === 1 ? 68 : n === 2 ? 58 : n === 3 ? 48 : 38, capFs);
+          const smallFs = Math.min(n === 1 ? 68 : n === 2 ? 34 : n === 3 ? 26 : 20, Math.floor(capFs * 0.7));
           const ys = [];
           let acc = 0;
           tiers.forEach((_, i) => {
@@ -907,7 +907,7 @@ function App() {
             acc += fs * 1.25;
           });
           const startY = 494 - 14 - acc;
-          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 20) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="18">' + card.nowPrice + '</text>' : '';
+          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 20) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="24">' + card.nowPrice + '</text>' : '';
           return nowRef + tiers.map((tier, i) => {
             const fs = i === n - 1 ? lastFs : smallFs;
             const each = parseTierEach(tier);
