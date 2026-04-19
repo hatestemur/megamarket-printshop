@@ -528,7 +528,7 @@ function PriceCard8x4({
       acc += fs + 3;
     });
     const blockH = acc + 10 + 3 + 10 + 3; // tiers + each + nowPrice + gaps
-    const startY = priceAreaBot - blockH + 10;
+    const startY = priceAreaBot - blockH + 18;
     return /*#__PURE__*/React.createElement(React.Fragment, null, card.nowPrice && /*#__PURE__*/React.createElement("text", {
       x: CW - 14,
       y: startY - 3,
@@ -1075,7 +1075,7 @@ function App() {
               acc += fs + 3;
             });
             const blockH = acc + 10 + 3 + 10 + 3;
-            const startY = priceAreaBot - blockH + 10;
+            const startY = priceAreaBot - blockH + 18;
             priceLines = tiers.map((tier, i) => {
               const fs = i === n - 1 ? lastFs : smallFs;
               const each = parseTierEach(tier);
