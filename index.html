@@ -528,10 +528,11 @@ function PriceCard8x4({
       acc += fs + 3;
     });
     const blockH = acc + 10 + 3 + 10 + 3; // tiers + each + nowPrice + gaps
-    const startY = priceAreaBot - acc - 2;
+    const tierAnchorY = 112; // same as nowPrice in single mode
+    const startY = tierAnchorY - acc;
     return /*#__PURE__*/React.createElement(React.Fragment, null, card.nowPrice && /*#__PURE__*/React.createElement("text", {
       x: CW - 14,
-      y: startY - 3,
+      y: startY - 6,
       textAnchor: "end",
       fill: "#555",
       fontFamily: FONT,
@@ -553,7 +554,7 @@ function PriceCard8x4({
         letterSpacing: "-0.3"
       }, tier), i === n - 1 && each && /*#__PURE__*/React.createElement("text", {
         x: CW - 14,
-        y: startY + ys[i] + 13,
+        y: 126,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
@@ -1074,12 +1075,12 @@ function App() {
               ys.push(acc + fs);
               acc += fs + 3;
             });
-            const blockH = acc + 10 + 3 + 10 + 3;
-            const startY = priceAreaBot - acc - 2;
+            const blockH = acc;
+            const startY = yo + 112 - acc;
             priceLines = tiers.map((tier, i) => {
               const fs = i === n - 1 ? lastFs : smallFs;
               const each = parseTierEach(tier);
-              return '<text x="' + (CW - 14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 14) + '" y="' + (startY + ys[i] + Math.round(fs * 0.28) + 18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>' : '');
+              return '<text x="' + (CW - 14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (i === tiers.length - 1 && each ? '<text x="' + (CW - 14) + '" y="' + (yo + 126) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>' : '');
             }).join('');
           } else {
             priceLines = wasLine + '<text x="' + (CW - 14) + '" y="' + (yo + 116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || "") + '</text>' + (card.unitPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '');
