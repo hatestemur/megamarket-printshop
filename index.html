@@ -47,18 +47,27 @@ function formatPrice(v) {
 /* ─── Unit price auto-calculator ─────────────────── */
 function calcUnitPrice(size, price) {
   if (!size || !price) return "";
-  // Parse price: £2.99 / 2.99 / 99p
   let priceVal = 0;
   const pMatch = price.match(/^(\d+\.?\d*)\s*p$/i);
   const gbpMatch = price.match(/£?(\d+\.?\d+)/);
   if (pMatch) priceVal = parseFloat(pMatch[1]) / 100;else if (gbpMatch) priceVal = parseFloat(gbpMatch[1]);
   if (!priceVal) return "";
-  // Parse size — handle packs like 6x330ml or 4 x 500g
   const s = size.toLowerCase().trim();
+  // Pack-only: "12 pack", "pack of 6", "6pk", "x12"
+  const packOnly = s.match(/^(\d+)\s*(pack|pk|pcs?|pieces?|count|ct|cans?|bottles?|bags?|tins?|rolls?|sheets?|tabs?|tablets?|caps?|capsules?|sachets?|pods?|wipes?)$/i) || s.match(/^pack\s+of\s+(\d+)$/i) || s.match(/^x\s*(\d+)$/i);
+  if (packOnly) {
+    const n = parseInt(packOnly[1]);
+    if (!n) return "";
+    const perItem = priceVal / n;
+    const pence = perItem * 100;
+    if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
+    return "\u00a3" + perItem.toFixed(2) + " each";
+  }
+  // Weight/volume: 6x330ml, 4 x 500g, 500g, 1kg, 2L
   let qty = 0,
     unit = "";
-  const packM = s.match(/(\d+\.?\d*)\s*[xX×]\s*(\d+\.?\d*)\s*(g|kg|ml|l|cl)/i);
-  const singleM = s.match(/(\d+\.?\d*)\s*(g|kg|ml|l|cl)/i);
+  const packM = s.match(/(\d+\.?\d*)\s*[xX\u00d7]\s*(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
+  const singleM = s.match(/(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
   if (packM) {
     qty = parseFloat(packM[1]) * parseFloat(packM[2]);
     unit = packM[3];
@@ -66,7 +75,6 @@ function calcUnitPrice(size, price) {
     qty = parseFloat(singleM[1]);
     unit = singleM[2];
   } else return "";
-  // Normalise to base unit (g or ml)
   unit = unit.toLowerCase();
   if (unit === "kg") {
     qty *= 1000;
@@ -85,7 +93,7 @@ function calcUnitPrice(size, price) {
   const label = unit === "g" ? "100g" : "100ml";
   const pence = per100 * 100;
   if (pence < 100) return Math.round(pence * 10) / 10 + "p per " + label;
-  return "£" + per100.toFixed(2) + " per " + label;
+  return "\u00a3" + per100.toFixed(2) + " per " + label;
 }
 const Y = "#FEDE00";
 const K = "#000000";
