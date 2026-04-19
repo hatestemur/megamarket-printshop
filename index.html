@@ -951,7 +951,7 @@ function App() {
       }).join("") + '</svg>';
       return '<div class="page" style="page-break-after:' + (si < batch8x4.length - 1 || cards.length > 0 ? 'always' : 'auto') + '">' + svgContent + '</div>';
     }).join("");
-    const css = window._getFontCSS() + "@page{size:A4 portrait;margin:0}" + "*{box-sizing:border-box;margin:0;padding:0}" + "html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + ".page{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}" + ".page:last-child{page-break-after:auto}" + ".page svg{display:block;width:100vw;height:100vh}" + 'svg[viewBox*="592"]{height:auto!important}';
+    const css = window._getFontCSS() + "@page{size:Promotional Card;margin:0}" + "*{box-sizing:border-box;margin:0;padding:0}" + "html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + ".page{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}" + ".page:last-child{page-break-after:auto}" + ".page svg{display:block;width:100vw;height:100vh}" + 'svg[viewBox*="592"]{height:auto!important}';
     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + (batch8x4.length > 0 ? sheetPages : "") + (cards.length > 0 ? a4Pages : "") + '</body></html>';
     const loadHtml2pdf = () => new Promise(res => {
       if (window.html2pdf) return res();
@@ -1483,7 +1483,7 @@ function App() {
       color: K,
       marginBottom: 6
     }
-  }, "A4 PORTRAIT"), /*#__PURE__*/React.createElement("div", {
+  }, "PROMOTIONAL CARD"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: "#666",
@@ -1491,7 +1491,7 @@ function App() {
       lineHeight: 1.65,
       marginBottom: 16
     }
-  }, "Full-page price cards printed one per A4 sheet. Large format, high-impact display for shelf or window."), /*#__PURE__*/React.createElement("div", {
+  }, "Full-page promotional price cards, printed one per A4 sheet. Large format, high-impact display for shelf or window."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
@@ -1522,7 +1522,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       textTransform: "uppercase"
     }
-  }, "Open A4 Template \u2192"))), /*#__PURE__*/React.createElement("div", {
+  }, "Open Promotional Card \u2192"))), /*#__PURE__*/React.createElement("div", {
     className: "landing-card",
     onClick: () => {
       setTemplate("8x4");
@@ -1635,7 +1635,7 @@ function App() {
       lineHeight: 1.65,
       marginBottom: 16
     }
-  }, "4 shelf-edge labels per A4 sheet. 152\xD774mm each, right-aligned with a perforation cut line."), /*#__PURE__*/React.createElement("div", {
+  }, "4 shelf talkers per A4 sheet. 152\xD774mm each, right-aligned with a perforation cut line."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
@@ -1666,7 +1666,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       textTransform: "uppercase"
     }
-  }, "Open 8\xD74 Template \u2192")))))), /*#__PURE__*/React.createElement("div", {
+  }, "Open Shelf Talker \u2192")))))), /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
@@ -1851,7 +1851,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 A4 (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setTimeout(() => exportPDF(), 50);
@@ -1869,7 +1869,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 8\xD74 (", batch8x4.length, ")"))), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Shelf Talker (", batch8x4.length, ")"))), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 20
     }
@@ -1883,7 +1883,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginBottom: 10
     }
-  }, "A4 Cards (", cards.length, ")"), /*#__PURE__*/React.createElement("div", {
+  }, "Promotional Cards (", cards.length, ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -1937,7 +1937,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginBottom: 10
     }
-  }, "8\xD74 Sheets (", batch8x4.length, ")"), /*#__PURE__*/React.createElement("div", {
+  }, "Shelf Talkers (", batch8x4.length, ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -2048,7 +2048,7 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       borderRadius: "3px 0 0 3px"
     }
-  }, "A4 Portrait"), /*#__PURE__*/React.createElement("button", {
+  }, "Promotional Card"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setTemplate("8x4"),
     style: {
       flex: 1,
@@ -2255,7 +2255,7 @@ function App() {
       color: "#bbb",
       letterSpacing: 1
     }
-  }, template === "a4" ? "A4 Portrait · 210×297mm" : "152×74mm · 4 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
+  }, template === "a4" ? "Promotional Card · 210×297mm" : "152×74mm · 4 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -2404,7 +2404,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     className: `tb ${tab8x4 === "editor" ? "on" : ""}`,
     onClick: () => setTab8x4("editor")
-  }, "+ New Sheet"), /*#__PURE__*/React.createElement("button", {
+  }, "+ New Shelf Talker"), /*#__PURE__*/React.createElement("button", {
     className: `tb ${tab8x4 === "batch" ? "on" : ""}`,
     onClick: () => setTab8x4("batch")
   }, "Batch (", batch8x4.length, ")")), tab8x4 === "editor" && /*#__PURE__*/React.createElement("div", {
@@ -2444,7 +2444,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       borderRadius: "3px 0 0 3px"
     }
-  }, "A4 Portrait"), /*#__PURE__*/React.createElement("button", {
+  }, "Promotional Card"), /*#__PURE__*/React.createElement("button", {
     style: {
       flex: 1,
       padding: "8px 0",
@@ -2683,7 +2683,7 @@ function App() {
       textTransform: "uppercase",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "A4 Portrait \xB7 4 per sheet"), /*#__PURE__*/React.createElement("div", {
+  }, "Promotional Card \xB7 4 per sheet"), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
       width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))",
@@ -2749,7 +2749,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "+ New Sheet")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "+ New Shelf Talker")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -2779,7 +2779,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "+ New Sheet")), /*#__PURE__*/React.createElement("div", {
+  }, "+ New Shelf Talker")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -2999,7 +2999,7 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginTop: 2
     }
-  }, entry.type === "a4" ? `A4 · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `8×4 · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt)), /*#__PURE__*/React.createElement("div", {
+  }, entry.type === "a4" ? `Promo · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `Shelf Talker · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt)), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
