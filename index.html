@@ -204,8 +204,11 @@ function PriceCard({
   }, card.size) : null)), card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
-    const lastFs = n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42;
-    const smallFs = n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22;
+    const maxTextLen = Math.max(...activeTiers.map(t => t.length), 1);
+    const availW = CW - 18 - sideW - 10; // 300px
+    const maxFsByWidth = Math.floor(availW / (maxTextLen * 0.52));
+    const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, maxFsByWidth);
+    const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(maxFsByWidth * 0.7));
     const ys = [];
     let acc = 0;
     activeTiers.forEach((_, i) => {
@@ -891,8 +894,11 @@ function App() {
         if (card.priceMode === "multibuy") {
           const tiers = (card.tiers || []).filter(t => t && t.trim());
           const n = tiers.length || 1;
-          const lastFs = n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42;
-          const smallFs = n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22;
+          const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
+          const availW = CW - 18 - sideW - 10;
+          const capFs = Math.floor(availW / (maxTierLen * 0.52));
+          const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
+          const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
           const ys = [];
           let acc = 0;
           tiers.forEach((_, i) => {
