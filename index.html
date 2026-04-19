@@ -158,7 +158,7 @@ function PriceCard({
     style: {
       fontFamily: FONT,
       fontWeight: 500,
-      fontSize: (card.productName || "").length > 30 ? 22 : (card.productName || "").length > 20 ? 27 : 34,
+      fontSize: (card.productName || "").length > 40 ? 24 : (card.productName || "").length > 28 ? 28 : (card.productName || "").length > 16 ? 31 : 34,
       lineHeight: 1.25,
       color: "#000",
       letterSpacing: "-0.01em"
@@ -846,7 +846,7 @@ function App() {
         const badge = "SPECIAL OFFER";
         const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
         const nameLen = (card.productName || "").length;
-        const nameFontSize = nameLen > 30 ? 22 : nameLen > 20 ? 27 : 34;
+        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
         const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
         const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
         return '<div class="card">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + '</svg></div>';
