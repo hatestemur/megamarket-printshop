@@ -509,8 +509,10 @@ function PriceCard8x4({
   }, card.size) : null)), card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
-    const lastFs = n === 1 ? 40 : n === 2 ? 34 : n === 3 ? 26 : 20;
-    const smallFs = n === 1 ? 40 : n === 2 ? 20 : n === 3 ? 15 : 12;
+    const maxLastFs = n === 1 ? 28 : n === 2 ? 22 : n === 3 ? 16 : 13;
+    const maxSmallFs = n === 1 ? 28 : n === 2 ? 14 : n === 3 ? 11 : 9;
+    const lastFs = maxLastFs;
+    const smallFs = maxSmallFs;
     const ys = [];
     let acc = 0;
     activeTiers.forEach((_, i) => {
@@ -518,10 +520,11 @@ function PriceCard8x4({
       ys.push(acc + fs * 0.78);
       acc += fs * 1.3;
     });
-    const startY = 130 - acc;
+    const eachSpace = 18 + Math.round(lastFs * 0.28);
+    const startY = logoBotR - 6 - acc - eachSpace;
     return /*#__PURE__*/React.createElement(React.Fragment, null, card.nowPrice && /*#__PURE__*/React.createElement("text", {
       x: CW - 14,
-      y: startY - 14,
+      y: startY - 8,
       textAnchor: "end",
       fill: "#000",
       fontFamily: FONT,
@@ -543,7 +546,7 @@ function PriceCard8x4({
         letterSpacing: "-0.5"
       }, tier), each && /*#__PURE__*/React.createElement("text", {
         x: CW - 14,
-        y: startY + ys[i] + fs * 0.42,
+        y: startY + ys[i] + Math.round(lastFs * 0.28) + 18,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
@@ -1051,8 +1054,8 @@ function App() {
           let priceLines = '';
           if (card.priceMode === "multibuy" && tiers.length) {
             const n = tiers.length,
-              lastFs = n === 1 ? 40 : n === 2 ? 34 : n === 3 ? 26 : 20,
-              smallFs = n === 1 ? 40 : n === 2 ? 20 : n === 3 ? 15 : 12;
+              lastFs = n === 1 ? 28 : n === 2 ? 22 : n === 3 ? 16 : 13,
+              smallFs = n === 1 ? 28 : n === 2 ? 14 : n === 3 ? 11 : 9;
             const ys = [];
             let acc = 0;
             tiers.forEach((_, i) => {
@@ -1060,7 +1063,8 @@ function App() {
               ys.push(acc + fs * 0.78);
               acc += fs * 1.3;
             });
-            const startY = yo + 130 - acc;
+            const eachSp = 18 + Math.round(lastFs * 0.28);
+            const startY = yo + logoBotR - 6 - acc - eachSp;
             priceLines = tiers.map((tier, i) => {
               const fs = i === n - 1 ? lastFs : smallFs;
               const each = parseTierEach(tier);
