@@ -1643,22 +1643,54 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginTop: 2
     }
-  }, cards.length, " A4 card", cards.length !== 1 ? "s" : "", " \xB7 ", batch8x4.length, " 8\xD74 sheet", batch8x4.length !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("button", {
-    onClick: printAll,
-    disabled: cards.length === 0 && batch8x4.length === 0,
+  }, cards.length, " A4 card", cards.length !== 1 ? "s" : "", " \xB7 ", batch8x4.length, " 8\xD74 sheet", batch8x4.length !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: Y,
-      color: K,
+      display: "flex",
+      gap: 8
+    }
+  }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("a4");
+      setTimeout(() => {
+        saveToLibrary();
+        print();
+      }, 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: K,
+      color: W,
       border: "none",
-      padding: "10px 20px",
+      padding: "10px 16px",
       fontWeight: 800,
-      fontSize: 12,
-      letterSpacing: 2,
+      fontSize: 11,
+      letterSpacing: 1.5,
       textTransform: "uppercase",
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Export All")), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 A4 (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("8x4");
+      setTimeout(() => {
+        saveToLibrary();
+        print();
+      }, 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "10px 16px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 8\xD74 (", batch8x4.length, ")"))), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 20
     }
