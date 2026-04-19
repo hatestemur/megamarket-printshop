@@ -1541,7 +1541,7 @@ function App() {
     onClick: () => setTab("batch")
   }, "Batch (", cards.length, ")")), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
+      display: view === "library" ? "none" : "flex",
       flex: 1,
       overflow: "hidden"
     }
@@ -2384,7 +2384,8 @@ function App() {
       flex: 1,
       overflowY: "auto",
       padding: 24,
-      background: "#f0f0f0"
+      background: "#f0f0f0",
+      minHeight: 0
     }
   }, library.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
