@@ -872,6 +872,7 @@ function App() {
     })));
     setEditIdx8x4(0);
     setTab8x4("batch");
+    showToast("Sheet added to queue ✓");
   };
   const startEditSheet8 = i => {
     setCards8x4([...batch8x4[i]]);
@@ -916,10 +917,12 @@ function App() {
         ...form
       } : x));
       setEditIdx(null);
+      showToast("Card updated in queue ✓");
     } else {
       setCards(c => [...c, {
         ...form
       }]);
+      showToast("Card added to queue ✓");
     }
     setForm({
       ...EMPTY
