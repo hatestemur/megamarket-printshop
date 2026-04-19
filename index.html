@@ -615,13 +615,7 @@ function App() {
   });
   const [tab8x4, setTab8x4] = useState("editor");
   const [view, setView] = useState("editor"); // "editor" | "library" | "landing"
-  const [landingDone, setLandingDone] = useState(() => {
-    try {
-      return !!localStorage.getItem("mm_template_chosen");
-    } catch (e) {
-      return false;
-    }
-  });
+  const [landingDone, setLandingDone] = useState(false);
   const [library, setLibrary] = useState(() => {
     try {
       const s = localStorage.getItem('megamarket_library');
@@ -1144,9 +1138,6 @@ function App() {
     onClick: () => {
       setTemplate("a4");
       setLandingDone(true);
-      try {
-        localStorage.setItem("mm_template_chosen", "1");
-      } catch (e) {}
     },
     style: {
       flex: "1 1 340px",
@@ -1287,9 +1278,6 @@ function App() {
     onClick: () => {
       setTemplate("8x4");
       setLandingDone(true);
-      try {
-        localStorage.setItem("mm_template_chosen", "1");
-      } catch (e) {}
     },
     style: {
       flex: "1 1 340px",
@@ -1475,9 +1463,6 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setLandingDone(false);
-      try {
-        localStorage.removeItem("mm_template_chosen");
-      } catch (e) {}
     },
     style: {
       background: "rgba(255,255,255,0.12)",
@@ -1505,9 +1490,6 @@ function App() {
     onClick: () => {
       if (view === "library") setView("editor");else {
         setLandingDone(false);
-        try {
-          localStorage.removeItem("mm_template_chosen");
-        } catch (e) {}
       }
     },
     style: {
