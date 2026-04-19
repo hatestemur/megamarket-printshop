@@ -614,7 +614,8 @@ function App() {
     return [];
   });
   const [tab8x4, setTab8x4] = useState("editor");
-  const [view, setView] = useState("editor"); // "editor" | "library" | "landing"
+  const [view, setView] = useState("editor");
+  const [showQueue, setShowQueue] = useState(false);
   const [landingDone, setLandingDone] = useState(false);
   const [library, setLibrary] = useState(() => {
     try {
@@ -863,6 +864,66 @@ function App() {
       ...EMPTY
     });
     setTab("batch");
+  };
+  const printAll = () => {
+    const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
+    // Build A4 pages
+    const CWa = 420,
+      CHa = 594,
+      sideWa = 92,
+      badgeH = 100;
+    const a4Pages = cards.map(card => {
+      const badge = "SPECIAL OFFER";
+      const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
+      const nameLen = (card.productName || "").length;
+      const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
+      const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+      const sizeText = card.size ? '<text x="' + (sideWa + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
+      return '<div class="page">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CWa + ' ' + CHa + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CWa + '" height="' + CHa + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideWa + '" height="' + CHa + '" fill="black"/>' + '<g transform="scale(' + (sideWa / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideWa + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CHa - badgeH) + '" width="' + CWa + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CWa / 2 + '" y="' + (CHa - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + '</svg></div>';
+    }).join("");
+    // Build 8x4 sheets
+    const CW8 = 420,
+      CH8 = 148,
+      sideW8 = 64;
+    const CARD_W = 304,
+      xStart = CW8 - CARD_W;
+    const sheetPages = batch8x4.map((sheet, si) => {
+      const svgContent = '<svg viewBox="0 0 ' + CW8 + ' ' + CH8 * 4 + '" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">' + '<rect x="0" y="0" width="' + xStart + '" height="' + CH8 * 4 + '" fill="white"/>' + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + CH8 * 4 + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' + sheet.map((card, ci) => {
+        const badge = "SPECIAL OFFER";
+        const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (Math.max(...badge.split(" ").map(w => w.length)) * 0.62))));
+        const logoBotR = Math.round(800 * sideW8 / 607.7);
+        const scaleX = (sideW8 / 607.7).toFixed(5);
+        const yo = ci * CH8;
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<foreignObject x="' + (xStart + sideW8 + 12) + '" y="' + (yo + 64) + '" width="' + (CARD_W - sideW8 - 20) + '" height="18"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:\"MadaniArabic\",sans-serif;font-weight:400;font-size:15px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">' + card.wasPrice + '</div></foreignObject>' : '';
+        const nowLine = '<text x="' + (CW8 - 14) + '" y="' + (yo + 116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + card.nowPrice + '</text>';
+        const unitLine = card.unitPrice ? '<text x="' + (CW8 - 14) + '" y="' + (yo + 130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+        return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH8 + '" fill="white"/>' + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW8 + '" height="' + logoBotR + '" fill="#000"/>' + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW8 + '" height="' + (CH8 - logoBotR) + '" fill="#CC2222"/>' + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<foreignObject x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW8 + '" height="' + (CH8 - logoBotR) + '"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:MadaniArabic,sans-serif;font-weight:700;font-size:' + badgeFontSize + 'px;color:#FEDE00;line-height:1.2;text-transform:uppercase;text-align:center;overflow:hidden">' + badge + '</div></foreignObject>' + '<foreignObject x="' + (xStart + sideW8 + 12) + '" y="' + (yo + 5) + '" width="' + (CARD_W - sideW8 - 20) + '" height="60"><div xmlns="http://www.w3.org/1999/xhtml"><div style="font-family:MadaniArabic,sans-serif;font-weight:500;font-size:17px;line-height:1.2;color:#000">' + card.productName + '</div>' + (card.size ? '<div style="font-family:MadaniArabic,sans-serif;font-size:10px;color:#555;margin-top:2px">' + card.size + '</div>' : '') + '</div></foreignObject>' + wasLine + nowLine + unitLine + (ci < 3 ? '<line x1="' + xStart + '" y1="' + (ci + 1) * CH8 + '" x2="' + CW8 + '" y2="' + (ci + 1) * CH8 + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
+      }).join("") + '</svg>';
+      return '<div class="page" style="page-break-after:' + (si < batch8x4.length - 1 || cards.length > 0 ? 'always' : 'auto') + '">' + svgContent + '</div>';
+    }).join("");
+    const css = window._getFontCSS() + "@page{size:A4 portrait;margin:0}" + "*{box-sizing:border-box;margin:0;padding:0}" + "html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + ".page{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}" + ".page:last-child{page-break-after:auto}" + ".page svg{display:block;width:100vw;height:100vh}" + 'svg[viewBox*="592"]{height:auto!important}';
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + (batch8x4.length > 0 ? sheetPages : "") + (cards.length > 0 ? a4Pages : "") + '</body></html>';
+    const entry = saveToLibrary();
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(iframe);
+        } catch (e) {}
+        setCards([]);
+        setBatch8x4([]);
+        setShowQueue(false);
+        showToast("Queue exported & saved to library ✓");
+      }, 1500);
+    }, 500);
   };
   const startEdit = i => {
     setForm({
@@ -1478,7 +1539,21 @@ function App() {
       flexShrink: 0
     },
     title: "Unsaved changes"
-  }), /*#__PURE__*/React.createElement("button", {
+  }), (cards.length > 0 || batch8x4.length > 0) && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowQueue(q => !q),
+    style: {
+      background: showQueue ? Y : "rgba(255,255,255,0.12)",
+      color: showQueue ? K : W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, "\u2295 Queue (", cards.length + batch8x4.length, ")"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setView(view === "library" ? "editor" : "library"),
     style: {
       background: view === "library" ? Y : "rgba(255,255,255,0.12)",
@@ -1539,9 +1614,189 @@ function App() {
   }, editIdx !== null ? `✏ Editing #${editIdx + 1}` : "+ New Card"), /*#__PURE__*/React.createElement("button", {
     className: `tb ${tab === "batch" ? "on" : ""}`,
     onClick: () => setTab("batch")
-  }, "Batch (", cards.length, ")")), /*#__PURE__*/React.createElement("div", {
+  }, "Batch (", cards.length, ")")), showQueue && /*#__PURE__*/React.createElement("div", {
     style: {
-      display: view === "library" ? "none" : "flex",
+      flex: 1,
+      overflowY: "auto",
+      padding: 24,
+      background: "#f0f0f0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 16,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      color: K
+    }
+  }, "PRINT QUEUE"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#888",
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2
+    }
+  }, cards.length, " A4 card", cards.length !== 1 ? "s" : "", " \xB7 ", batch8x4.length, " 8\xD74 sheet", batch8x4.length !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("button", {
+    onClick: printAll,
+    disabled: cards.length === 0 && batch8x4.length === 0,
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "10px 20px",
+      fontWeight: 800,
+      fontSize: 12,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Export All")), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 2,
+      color: "#888",
+      textTransform: "uppercase",
+      fontFamily: "system-ui,sans-serif",
+      marginBottom: 10
+    }
+  }, "A4 Cards (", cards.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 12
+    }
+  }, cards.map((card, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+      overflow: "hidden",
+      width: 420 * 0.2,
+      height: 594 * 0.2
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard, {
+    card: card,
+    fit: true
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#888",
+      fontFamily: "system-ui,sans-serif",
+      maxWidth: 84,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, card.productName || "—"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => del(i),
+    style: {
+      fontSize: 10,
+      background: "none",
+      border: "none",
+      color: "#c00",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Remove"))))), batch8x4.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 2,
+      color: "#888",
+      textTransform: "uppercase",
+      fontFamily: "system-ui,sans-serif",
+      marginBottom: 10
+    }
+  }, "8\xD74 Sheets (", batch8x4.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 12
+    }
+  }, batch8x4.map((sheet, si) => /*#__PURE__*/React.createElement("div", {
+    key: si,
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: W,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+      overflow: "hidden",
+      width: 420 * 0.2
+    }
+  }, sheet.map((card, ci) => /*#__PURE__*/React.createElement("div", {
+    key: ci,
+    style: {
+      height: 148 * 0.2,
+      overflow: "hidden",
+      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
+    card: card,
+    fit: true
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#888",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Sheet ", si + 1), /*#__PURE__*/React.createElement("button", {
+    onClick: () => delSheet8(si),
+    style: {
+      fontSize: 10,
+      background: "none",
+      border: "none",
+      color: "#c00",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Remove"))))), cards.length === 0 && batch8x4.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "40vh",
+      color: "#bbb"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 36
+    }
+  }, "\uD83D\uDDC2\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 8
+    }
+  }, "QUEUE EMPTY"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: showQueue || view === "library" ? "none" : "flex",
       flex: 1,
       overflow: "hidden"
     }
