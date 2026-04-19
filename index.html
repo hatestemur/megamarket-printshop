@@ -516,8 +516,8 @@ function PriceCard8x4({
     const priceAreaBot = logoBotR - 4; // above badge
     const priceH = priceAreaBot - priceAreaTop; // ~50px
     // nowPrice: 10px, gap: 3px, tier: ?, gap: 3px, each: 10px
-    const reservedRows = 10 + 3 + 3 + 10; // nowPrice + each + gaps = 26
-    const tierH = Math.max(12, Math.min(24, Math.floor((priceH - reservedRows) / n)));
+    const reservedRows = 10 + 3; // each + gap = 13
+    const tierH = Math.max(12, Math.min(34, Math.floor((priceH - reservedRows) / n)));
     const lastFs = tierH;
     const smallFs = Math.max(10, Math.floor(tierH * 0.7));
     const ys = [];
@@ -1063,8 +1063,8 @@ function App() {
             const priceAreaTop = yo + 30,
               priceAreaBot = yo + logoBotR - 4,
               priceH = priceAreaBot - priceAreaTop;
-            const reservedRows = 26;
-            const tierH = Math.max(12, Math.min(24, Math.floor((priceH - reservedRows) / tiers.length)));
+            const reservedRows = 13;
+            const tierH = Math.max(12, Math.min(34, Math.floor((priceH - reservedRows) / tiers.length)));
             const lastFs = tierH,
               smallFs = Math.max(10, Math.floor(tierH * 0.7));
             const ys = [];
