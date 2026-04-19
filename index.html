@@ -552,8 +552,7 @@ function App() {
       [k]: v
     };
     if (k === "size" || k === "nowPrice") {
-      const auto = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
-      if (auto) next.unitPrice = auto;
+      next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
     }
     return next;
   });
@@ -580,8 +579,7 @@ function App() {
       [k]: v
     };
     if (k === "size" || k === "nowPrice") {
-      const auto = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
-      if (auto) next.unitPrice = auto;
+      next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
     }
     return next;
   }));
