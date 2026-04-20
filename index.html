@@ -739,7 +739,6 @@ function App() {
   }, []); // active tag filter
   const [addingTagFor, setAddingTagFor] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  // ── Unified queue ──
   const [queue, setQueue] = useState(() => {
     try {
       const s = localStorage.getItem('mm_queue');
@@ -753,7 +752,9 @@ function App() {
       localStorage.setItem('mm_queue', JSON.stringify(queue));
     } catch (e) {}
   }, [queue]);
-  const addToQueue = (status = 'working') => {
+  const queueWorking = queue.filter(q => q.status === 'working');
+  const queueReady = queue.filter(q => q.status === 'ready');
+  const addToQueue = status => {
     if (template === 'a4') {
       if (!canSave) return;
       const item = {
@@ -783,7 +784,6 @@ function App() {
         status,
         name: ((_cards8x4$find = cards8x4.find(c => c.productName)) === null || _cards8x4$find === void 0 ? void 0 : _cards8x4$find.productName) || 'Untitled',
         data: [...cards8x4],
-        editIdx: editIdx8x4,
         savedAt: new Date().toLocaleTimeString('en-GB', {
           hour: '2-digit',
           minute: '2-digit'
@@ -806,11 +806,11 @@ function App() {
       showToast(status === 'ready' ? 'Added to Ready ✓' : 'Saved to Working ✓');
     }
   };
-  const moveQueue = (id, status) => setQueue(q => q.map(item => item.id === id ? {
-    ...item,
+  const moveQueue = (id, status) => setQueue(q => q.map(i => i.id === id ? {
+    ...i,
     status
-  } : item));
-  const removeQueue = id => setQueue(q => q.filter(item => item.id !== id));
+  } : i));
+  const removeQueue = id => setQueue(q => q.filter(i => i.id !== id));
   const loadFromQueue = item => {
     setTemplate(item.type);
     if (item.type === 'a4') {
@@ -818,17 +818,17 @@ function App() {
         ...EMPTY,
         ...item.data
       });
+      setTab('editor');
     } else {
       setCards8x4(item.data);
-      setEditIdx8x4(item.editIdx || 0);
+      setEditIdx8x4(0);
+      setTab8x4('editor');
     }
     removeQueue(item.id);
     setShowQueue(false);
     setLandingDone(true);
     showToast('Loaded into editor ✓');
-  };
-  const queueWorking = queue.filter(q => q.status === 'working');
-  const queueReady = queue.filter(q => q.status === 'ready'); // mobile preview toggle // entry id being tagged
+  }; // mobile preview toggle // entry id being tagged
   const [drafts, setDrafts] = useState(() => {
     try {
       const s = localStorage.getItem("mm_drafts");
@@ -1141,7 +1141,7 @@ function App() {
   const delSheet8 = i => setBatch8x4(b => b.filter((_, j) => j !== i));
   const dupeSheet8 = i => setBatch8x4(b => [...b.slice(0, i + 1), [...b[i]], ...b.slice(i + 1)]);
   const canAddSheet = cards8x4.some(c => c.productName);
-  const hasUnsaved = queue.length > 0 || (template === "a4" ? form.productName : cards8x4.some(c => c.productName));
+  const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : cards8x4.some(c => c.productName));
   const clearCurrent = () => {
     if (template === "a4") {
       setCards([]);
@@ -1305,10 +1305,7 @@ function App() {
       });
       saveToLibrary();
       await downloadPDF(pages, "megamarket-a4-" + Date.now() + ".pdf");
-      setQueue(q => q.filter(item => !(item.type === 'a4' && item.status === 'ready')));
-      setForm({
-        ...EMPTY
-      });
+      setQueue(q => q.filter(i => !(i.type === 'a4' && i.status === 'ready')));
       showToast("PDF downloaded & saved to library ✓");
     } else {
       const CW = 420,
@@ -1365,7 +1362,6 @@ function App() {
       });
       saveToLibrary();
       await downloadPDF(pages, "megamarket-8x4-" + Date.now() + ".pdf");
-      setQueue(q => q.filter(item => !(item.type === '8x4' && item.status === 'ready')));
       setCards8x4([0, 1, 2, 3].map(() => ({
         productName: "",
         size: "",
@@ -1379,6 +1375,7 @@ function App() {
         tiers: ["", ""],
         validUntil: ""
       })));
+      setQueue(q => q.filter(i => !(i.type === '8x4' && i.status === 'ready')));
       showToast("PDF downloaded & saved to library ✓");
     }
   };
@@ -2069,7 +2066,6 @@ function App() {
   }, queue.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowQueue(q => !q);
-      setShowDrafts(false);
       if (view === "library") setView("editor");
     },
     style: {
@@ -2090,7 +2086,6 @@ function App() {
     onClick: () => {
       setView(view === "library" ? "editor" : "library");
       setShowQueue(false);
-      setShowDrafts(false);
     },
     style: {
       background: "none",
@@ -2106,20 +2101,1039 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, view === "library" ? "← Editor" : `Library${library.length ? ` (${library.length})` : ""}`))), template === "a4" && /*#__PURE__*/React.createElement("div", {
+  }, view === "library" ? "← Editor" : `Library${library.length ? ` (${library.length})` : ""}`))), showQueue && /*#__PURE__*/React.createElement("div", {
     style: {
-      background: "#000000",
-      borderBottom: "1px solid rgba(255,255,255,0.15)",
-      padding: "0 20px",
-      display: "flex"
+      flex: 1,
+      overflowY: "auto",
+      background: "#f0f0f0"
     }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: `tb ${tab === "editor" ? "on" : ""}`,
-    onClick: () => setTab("editor")
-  }, editIdx !== null ? `✏ Editing #${editIdx + 1}` : "+ New Card"), /*#__PURE__*/React.createElement("button", {
-    className: `tb ${tab === "batch" ? "on" : ""}`,
-    onClick: () => setTab("batch")
-  }, "Batch (", cards.length, ")")), showDrafts && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "20px 24px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "WORKING (", queueWorking.length, ")"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontFamily: "system-ui,sans-serif",
+      opacity: 0.6
+    }
+  }, "Save drafts \u2014 mark ready when done")), queueWorking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No drafts yet \u2014 use \"Save Draft\" in the editor") : queueWorking.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadFromQueue(item),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'ready'),
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Ready \u2192"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 1,
+      background: "#ddd",
+      margin: "16px 24px"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 24px 24px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "READY TO PRINT (", queueReady.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No items ready \u2014 mark drafts ready or use \"+ Ready to Print\" in the editor") : queueReady.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'working'),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "\u2190 Draft"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715"))))), showQueue && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      background: "#f0f0f0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "20px 24px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "WORKING (", queueWorking.length, ")"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontFamily: "system-ui,sans-serif",
+      opacity: 0.6
+    }
+  }, "Save drafts \u2014 mark ready when done")), queueWorking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No drafts yet \u2014 use \"Save Draft\" in the editor") : queueWorking.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadFromQueue(item),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'ready'),
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Ready \u2192"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 1,
+      background: "#ddd",
+      margin: "16px 24px"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 24px 24px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "READY TO PRINT (", queueReady.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No items ready \u2014 mark drafts ready or use \"+ Ready to Print\" in the editor") : queueReady.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'working'),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "\u2190 Draft"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715"))))), showQueue && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      background: "#f0f0f0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "20px 24px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "WORKING (", queueWorking.length, ")"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontFamily: "system-ui,sans-serif",
+      opacity: 0.6
+    }
+  }, "Save drafts \u2014 mark ready when done")), queueWorking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No drafts yet \u2014 use \"Save Draft\" in the editor") : queueWorking.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadFromQueue(item),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'ready'),
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Ready \u2192"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 1,
+      background: "#ddd",
+      margin: "16px 24px"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 24px 24px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "READY TO PRINT (", queueReady.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No items ready \u2014 mark drafts ready or use \"+ Ready to Print\" in the editor") : queueReady.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'working'),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "\u2190 Draft"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715"))))), showQueue && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      background: "#f0f0f0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "20px 24px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "WORKING (", queueWorking.length, ")"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontFamily: "system-ui,sans-serif",
+      opacity: 0.6
+    }
+  }, "Save drafts \u2014 mark ready when done")), queueWorking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No drafts yet \u2014 use \"Save Draft\" in the editor") : queueWorking.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadFromQueue(item),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'ready'),
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "Ready \u2192"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 1,
+      background: "#ddd",
+      margin: "16px 24px"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "0 24px 24px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "READY TO PRINT (", queueReady.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
+      setShowQueue(false);
+    },
+    style: {
+      background: Y,
+      color: K,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      padding: "16px 0",
+      textAlign: "center",
+      opacity: 0.4
+    }
+  }, "No items ready \u2014 mark drafts ready or use \"+ Ready to Print\" in the editor") : queueReady.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    style: {
+      background: W,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: item.type === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2,
+      opacity: 0.7
+    }
+  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => moveQueue(item.id, 'working'),
+    style: {
+      background: "none",
+      border: "1px solid #ccc",
+      padding: "5px 10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      flexShrink: 0
+    }
+  }, "\u2190 Draft"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeQueue(item.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      lineHeight: 1
+    }
+  }, "\u2715"))))), showDrafts && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -2265,150 +3279,37 @@ function App() {
     style: {
       flex: 1,
       overflowY: "auto",
+      padding: 24,
       background: "#f0f0f0"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: "20px 24px 0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 12
+      marginBottom: 20
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 900,
-      fontSize: 13,
+      fontSize: 16,
       letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "WORKING (", queueWorking.length, ")"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
       fontFamily: "system-ui,sans-serif",
-      opacity: 0.6
+      color: K
     }
-  }, "Mark ready when done")), queueWorking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "PRINT QUEUE"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
+      color: "#000",
       fontFamily: "system-ui,sans-serif",
-      padding: "16px 0",
-      textAlign: "center",
-      opacity: 0.4
+      marginTop: 2
     }
-  }, "No drafts yet \u2014 use \"Save Draft\" in the editor") : queueWorking.map(item => /*#__PURE__*/React.createElement("div", {
-    key: item.id,
-    style: {
-      background: W,
-      padding: "12px 14px",
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-      marginBottom: 6
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 4,
-      alignSelf: "stretch",
-      background: item.type === "a4" ? K : R,
-      borderRadius: 2,
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 12,
-      fontFamily: "system-ui,sans-serif",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, item.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 2,
-      opacity: 0.7
-    }
-  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => loadFromQueue(item),
-    style: {
-      background: "none",
-      border: "1px solid #ddd",
-      padding: "5px 10px",
-      fontWeight: 700,
-      fontSize: 10,
-      letterSpacing: 1,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      flexShrink: 0
-    }
-  }, "Edit"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => moveQueue(item.id, 'ready'),
-    style: {
-      background: Y,
-      color: K,
-      border: "none",
-      padding: "5px 10px",
-      fontWeight: 700,
-      fontSize: 10,
-      letterSpacing: 1,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      flexShrink: 0
-    }
-  }, "Ready \u2192"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => removeQueue(item.id),
-    style: {
-      background: "none",
-      color: "#c00",
-      border: "none",
-      fontWeight: 700,
-      fontSize: 14,
-      cursor: "pointer",
-      flexShrink: 0
-    }
-  }, "\u2715")))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 1,
-      background: "#ddd",
-      margin: "16px 24px"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "0 24px 24px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, cards.length, " A4 card", cards.length !== 1 ? "s" : "", " \xB7 ", batch8x4.length, " 8\xD74 sheet", batch8x4.length !== 1 ? "s" : "")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 12
+      gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 900,
-      fontSize: 13,
-      letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "READY TO PRINT (", queueReady.length, ")"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6
-    }
-  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
       setTimeout(() => exportPDF(), 50);
@@ -2418,7 +3319,7 @@ function App() {
       background: K,
       color: W,
       border: "none",
-      padding: "8px 14px",
+      padding: "10px 16px",
       fontWeight: 800,
       fontSize: 11,
       letterSpacing: 1.5,
@@ -2426,7 +3327,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setTimeout(() => exportPDF(), 50);
@@ -2436,7 +3337,7 @@ function App() {
       background: Y,
       color: K,
       border: "none",
-      padding: "8px 14px",
+      padding: "10px 16px",
       fontWeight: 800,
       fontSize: 11,
       letterSpacing: 1.5,
@@ -2444,80 +3345,143 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Shelf Talker (", batch8x4.length, ")"))), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 12,
-      fontFamily: "system-ui,sans-serif",
-      padding: "16px 0",
-      textAlign: "center",
-      opacity: 0.4
-    }
-  }, "No items ready \u2014 mark drafts ready or use \"+ Ready to Print\" in the editor") : queueReady.map(item => /*#__PURE__*/React.createElement("div", {
-    key: item.id,
-    style: {
-      background: W,
-      padding: "12px 14px",
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-      marginBottom: 6
+      marginBottom: 20
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 4,
-      alignSelf: "stretch",
-      background: item.type === "a4" ? K : R,
-      borderRadius: 2,
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
+      fontSize: 10,
       fontWeight: 700,
-      fontSize: 12,
+      letterSpacing: 2,
+      color: "#000",
+      textTransform: "uppercase",
       fontFamily: "system-ui,sans-serif",
+      marginBottom: 10
+    }
+  }, "Promotional Cards (", cards.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 12
+    }
+  }, cards.map((card, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+      overflow: "hidden",
+      width: 420 * 0.2,
+      height: 594 * 0.2
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard, {
+    card: card,
+    fit: true
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#000",
+      fontFamily: "system-ui,sans-serif",
+      maxWidth: 84,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
     }
-  }, item.name), /*#__PURE__*/React.createElement("div", {
+  }, card.productName || "—"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => del(i),
     style: {
       fontSize: 10,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 2,
-      opacity: 0.7
-    }
-  }, item.type === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", item.savedAt)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => moveQueue(item.id, 'working'),
-    style: {
       background: "none",
-      border: "1px solid #ddd",
-      padding: "5px 10px",
-      fontWeight: 700,
-      fontSize: 10,
-      letterSpacing: 1,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      flexShrink: 0
-    }
-  }, "\u2190 Draft"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => removeQueue(item.id),
-    style: {
-      background: "none",
-      color: "#c00",
       border: "none",
-      fontWeight: 700,
-      fontSize: 14,
+      color: "#c00",
       cursor: "pointer",
-      flexShrink: 0
+      fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2715"))))), /*#__PURE__*/React.createElement("div", {
+  }, "Remove"))))), batch8x4.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 2,
+      color: "#000",
+      textTransform: "uppercase",
+      fontFamily: "system-ui,sans-serif",
+      marginBottom: 10
+    }
+  }, "Shelf Talkers (", batch8x4.length, ")"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 12
+    }
+  }, batch8x4.map((sheet, si) => /*#__PURE__*/React.createElement("div", {
+    key: si,
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: W,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+      overflow: "hidden",
+      width: 420 * 0.2
+    }
+  }, sheet.map((card, ci) => /*#__PURE__*/React.createElement("div", {
+    key: ci,
+    style: {
+      height: 148 * 0.2,
+      overflow: "hidden",
+      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
+    }
+  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
+    card: card,
+    fit: true
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#000",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Sheet ", si + 1), /*#__PURE__*/React.createElement("button", {
+    onClick: () => delSheet8(si),
+    style: {
+      fontSize: 10,
+      background: "none",
+      border: "none",
+      color: "#c00",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "Remove"))))), cards.length === 0 && batch8x4.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "40vh",
+      color: "#bbb"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 36
+    }
+  }, "\uD83D\uDDC2\uFE0F"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 8
+    }
+  }, "QUEUE EMPTY"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: showQueue || view === "library" ? "none" : "flex",
       flex: 1,
@@ -2903,20 +3867,6 @@ function App() {
       minHeight: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#000000",
-      borderBottom: "1px solid rgba(255,255,255,0.15)",
-      padding: "0 20px",
-      display: "flex",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: `tb ${tab8x4 === "editor" ? "on" : ""}`,
-    onClick: () => setTab8x4("editor")
-  }, "+ New Shelf Talker"), /*#__PURE__*/React.createElement("button", {
-    className: `tb ${tab8x4 === "batch" ? "on" : ""}`,
-    onClick: () => setTab8x4("batch")
-  }, "Batch (", batch8x4.length, ")")), tab8x4 === "editor" && /*#__PURE__*/React.createElement("div", {
     className: "main-row"
   }, /*#__PURE__*/React.createElement("div", {
     className: "form-pane"
@@ -3149,7 +4099,7 @@ function App() {
     style: {
       flex: 1,
       background: canAddSheet ? "#333" : "#ddd",
-      color: canAddSheet ? W : "#aaa",
+      color: W,
       border: "none",
       padding: "12px",
       fontWeight: 800,
@@ -3209,145 +4159,7 @@ function App() {
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
     fit: true
-  })))))), tab8x4 === "batch" && /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      padding: 16
-    }
-  }, batch8x4.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "60vh",
-      color: "#bbb"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 42
-    }
-  }, "\uD83D\uDDC2\uFE0F"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      letterSpacing: 3,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 8
-    }
-  }, "NO SHEETS YET"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTab8x4("editor"),
-    style: {
-      marginTop: 16,
-      background: K,
-      color: W,
-      border: "none",
-      padding: "10px 24px",
-      fontWeight: 800,
-      fontSize: 12,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "+ New Shelf Talker")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      letterSpacing: 2,
-      color: "#000",
-      textTransform: "uppercase",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, batch8x4.length, " sheet", batch8x4.length !== 1 ? "s" : "", " in batch"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTab8x4("editor"),
-    style: {
-      background: K,
-      color: W,
-      border: "none",
-      padding: "8px 18px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "+ New Shelf Talker")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 20
-    }
-  }, batch8x4.map((sheet, si) => /*#__PURE__*/React.createElement("div", {
-    key: si,
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 6
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: W,
-      boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-      overflow: "hidden",
-      width: 420 * 0.38
-    }
-  }, sheet.map((card, ci) => /*#__PURE__*/React.createElement("div", {
-    key: ci,
-    style: {
-      height: 148 * 0.38,
-      overflow: "hidden",
-      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
-    }
-  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
-    card: card,
-    fit: true
-  })))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 4,
-      width: 420 * 0.38
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => startEditSheet8(si),
-    style: {
-      flex: 1,
-      background: K,
-      color: W
-    }
-  }, "Edit"), /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => dupeSheet8(si),
-    style: {
-      flex: 1,
-      background: Y,
-      color: K
-    }
-  }, "Dupe"), /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => delSheet8(si),
-    style: {
-      flex: 1,
-      background: "#c0392b",
-      color: W
-    }
-  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: "#000",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Sheet ", si + 1)))))))), view === "library" && /*#__PURE__*/React.createElement("div", {
+  })))))))), view === "library" && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
