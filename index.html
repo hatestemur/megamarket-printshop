@@ -686,6 +686,20 @@ function App() {
   const [tab8x4, setTab8x4] = useState("editor");
   const [view, setView] = useState("editor");
   const [showQueue, setShowQueue] = useState(false);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [drafts, setDrafts] = useState(() => {
+    try {
+      const s = localStorage.getItem("mm_drafts");
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("mm_drafts", JSON.stringify(drafts));
+    } catch (e) {}
+  }, [drafts]);
   const [landingDone, setLandingDone] = useState(false);
   const [library, setLibrary] = useState(() => {
     try {
@@ -780,6 +794,57 @@ function App() {
       localStorage.setItem(STORAGE_KEY_LIB, JSON.stringify(library));
     } catch (e) {}
   }, [library]);
+  const saveDraft = () => {
+    var _cards8x4$editIdx8x;
+    const draft = {
+      id: Date.now(),
+      name: (template === "a4" ? form.productName : (_cards8x4$editIdx8x = cards8x4[editIdx8x4]) === null || _cards8x4$editIdx8x === void 0 ? void 0 : _cards8x4$editIdx8x.productName) || "Untitled",
+      template,
+      savedAt: new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+      // A4: save current form
+      form: template === "a4" ? {
+        ...form
+      } : null,
+      // 8x4: save current card slot
+      card8: template === "8x4" ? {
+        ...cards8x4[editIdx8x4]
+      } : null,
+      editIdx8x4: template === "8x4" ? editIdx8x4 : null
+    };
+    setDrafts(d => {
+      const next = [draft, ...d.filter(x => x.id !== draft.id)].slice(0, 5);
+      return next;
+    });
+    showToast("Draft saved ✓");
+  };
+  const loadDraft = draft => {
+    if (draft.template === "a4") {
+      setTemplate("a4");
+      setForm({
+        ...EMPTY,
+        ...draft.form
+      });
+      setEditIdx(null);
+      setTab("editor");
+    } else {
+      setTemplate("8x4");
+      setCards8x4(prev => prev.map((c, i) => i === draft.editIdx8x4 ? {
+        ...c,
+        ...draft.card8
+      } : c));
+      setEditIdx8x4(draft.editIdx8x4);
+      setTab8x4("editor");
+    }
+    setShowDrafts(false);
+    setLandingDone(true);
+    showToast("Draft loaded ✓");
+  };
+  const deleteDraft = id => setDrafts(d => d.filter(x => x.id !== id));
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -1761,6 +1826,7 @@ function App() {
   }), (cards.length > 0 || batch8x4.length > 0) && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowQueue(q => !q);
+      setShowDrafts(false);
       if (view === "library") setView("editor");
     },
     style: {
@@ -1777,8 +1843,27 @@ function App() {
     }
   }, "\u2295 Queue (", cards.length + batch8x4.length, ")"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
+      setShowDrafts(d => !d);
+      setShowQueue(false);
+      if (view === "library") setView("editor");
+    },
+    style: {
+      background: showDrafts ? Y : "rgba(255,255,255,0.12)",
+      color: showDrafts ? K : W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, "Drafts", drafts.length ? " (" + drafts.length + ")" : ""), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
       setView(view === "library" ? "editor" : "library");
       setShowQueue(false);
+      setShowDrafts(false);
     },
     style: {
       background: view === "library" ? Y : "rgba(255,255,255,0.12)",
@@ -1836,7 +1921,149 @@ function App() {
   }, editIdx !== null ? `✏ Editing #${editIdx + 1}` : "+ New Card"), /*#__PURE__*/React.createElement("button", {
     className: `tb ${tab === "batch" ? "on" : ""}`,
     onClick: () => setTab("batch")
-  }, "Batch (", cards.length, ")")), showQueue && /*#__PURE__*/React.createElement("div", {
+  }, "Batch (", cards.length, ")")), showDrafts && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      padding: 24,
+      background: "#f0f0f0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      fontSize: 16,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      color: K
+    }
+  }, "DRAFTS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: K,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2
+    }
+  }, "Up to 5 saved \u2014 oldest removed automatically")), /*#__PURE__*/React.createElement("button", {
+    onClick: saveDraft,
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "10px 16px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "+ Save Current")), drafts.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "40vh",
+      color: K
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 36
+    }
+  }, "\uD83D\uDCDD"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: 2,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 8
+    }
+  }, "NO DRAFTS YET"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 4
+    }
+  }, "Click \"+ Save Current\" to save your work in progress")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, drafts.map(draft => /*#__PURE__*/React.createElement("div", {
+    key: draft.id,
+    style: {
+      background: W,
+      padding: "14px 16px",
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 4,
+      alignSelf: "stretch",
+      background: draft.template === "a4" ? K : R,
+      borderRadius: 2,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 13,
+      fontFamily: "system-ui,sans-serif",
+      color: K,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, draft.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: K,
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 2
+    }
+  }, draft.template === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", draft.savedAt)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadDraft(draft),
+    style: {
+      background: K,
+      color: W,
+      border: "none",
+      padding: "6px 12px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      flexShrink: 0
+    }
+  }, "Load"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => deleteDraft(draft.id),
+    style: {
+      background: "none",
+      color: "#c00",
+      border: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0,
+      padding: "0 4px"
+    }
+  }, "\u2715"))))), showQueue && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
@@ -2044,7 +2271,7 @@ function App() {
     }
   }, "QUEUE EMPTY"))), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: showQueue || view === "library" ? "none" : "flex",
+      display: showQueue || showDrafts || view === "library" ? "none" : "flex",
       flex: 1,
       overflow: "hidden"
     }
