@@ -579,25 +579,16 @@ function PriceCard8x4({
         fontSize: "10"
       }, each));
     }));
-  })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
-    x: xStart + sideW + 12,
-    y: 60,
-    width: CARD_W - sideW - 20,
-    height: 24
-  }, /*#__PURE__*/React.createElement("div", {
-    xmlns: "http://www.w3.org/1999/xhtml",
-    style: {
-      fontFamily: FONT,
-      fontWeight: 400,
-      fontSize: 20,
-      color: "#000",
-      textDecoration: "line-through",
-      textDecorationColor: "#000",
-      textDecorationThickness: "1.5px",
-      textAlign: "right",
-      lineHeight: 1.1
-    }
-  }, card.wasPrice)) : null, /*#__PURE__*/React.createElement("text", {
+  })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("text", {
+    x: CW - 14,
+    y: 80,
+    textAnchor: "end",
+    fill: "#000",
+    fontFamily: FONT,
+    fontWeight: "400",
+    fontSize: "20",
+    textDecoration: "line-through"
+  }, card.wasPrice) : null, /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
     y: 116,
     textAnchor: "end",
