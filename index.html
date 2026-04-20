@@ -687,6 +687,8 @@ function App() {
   const [view, setView] = useState("editor");
   const [showQueue, setShowQueue] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
+  const [libraryFilter, setLibraryFilter] = useState(null); // active tag filter
+  const [addingTagFor, setAddingTagFor] = useState(null); // entry id being tagged
   const [drafts, setDrafts] = useState(() => {
     try {
       const s = localStorage.getItem("mm_drafts");
@@ -845,6 +847,23 @@ function App() {
     showToast("Draft loaded ✓");
   };
   const deleteDraft = id => setDrafts(d => d.filter(x => x.id !== id));
+  const addTagToEntry = (id, tag) => {
+    const t = tag.trim().toLowerCase();
+    if (!t) return;
+    setLibrary(lib => lib.map(e => {
+      var _e$tags;
+      return e.id === id && !((_e$tags = e.tags) !== null && _e$tags !== void 0 && _e$tags.includes(t)) ? {
+        ...e,
+        tags: [...(e.tags || []), t]
+      } : e;
+    }));
+  };
+  const removeTagFromEntry = (id, tag) => {
+    setLibrary(lib => lib.map(e => e.id === id ? {
+      ...e,
+      tags: (e.tags || []).filter(t => t !== tag)
+    } : e));
+  };
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -868,7 +887,8 @@ function App() {
         day: "numeric",
         month: "short",
         year: "numeric"
-      })
+      }),
+      tags: []
     };
     setLibrary(lib => [entry, ...lib]);
     return entry;
@@ -3070,7 +3090,57 @@ function App() {
       background: "#f0f0f0",
       minHeight: 0
     }
-  }, library.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, (() => {
+    const allTags = [...new Set(library.flatMap(e => e.tags || []))];
+    return allTags.length > 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6,
+        flexWrap: "wrap",
+        marginBottom: 16,
+        alignItems: "center"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.5,
+        textTransform: "uppercase",
+        fontFamily: "system-ui,sans-serif",
+        color: K,
+        marginRight: 4
+      }
+    }, "Filter:"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setLibraryFilter(null),
+      style: {
+        background: libraryFilter === null ? K : "#e0e0e0",
+        color: libraryFilter === null ? W : K,
+        border: "none",
+        padding: "4px 10px",
+        fontWeight: 700,
+        fontSize: 10,
+        letterSpacing: 1,
+        cursor: "pointer",
+        fontFamily: "system-ui,sans-serif",
+        textTransform: "uppercase"
+      }
+    }, "All"), allTags.map(tag => /*#__PURE__*/React.createElement("button", {
+      key: tag,
+      onClick: () => setLibraryFilter(libraryFilter === tag ? null : tag),
+      style: {
+        background: libraryFilter === tag ? Y : "#e0e0e0",
+        color: K,
+        border: "none",
+        padding: "4px 10px",
+        fontWeight: 700,
+        fontSize: 10,
+        letterSpacing: 1,
+        cursor: "pointer",
+        fontFamily: "system-ui,sans-serif",
+        textTransform: "uppercase"
+      }
+    }, tag))) : null;
+  })(), library.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -3114,7 +3184,7 @@ function App() {
       flexDirection: "column",
       gap: 10
     }
-  }, library.map(entry => /*#__PURE__*/React.createElement("div", {
+  }, library.filter(e => !libraryFilter || (e.tags || []).includes(libraryFilter)).map(entry => /*#__PURE__*/React.createElement("div", {
     key: entry.id,
     style: {
       background: W,
@@ -3216,7 +3286,68 @@ function App() {
       fontFamily: "system-ui,sans-serif",
       marginTop: 2
     }
-  }, entry.type === "a4" ? `Promo · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `Shelf Talker · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt)), /*#__PURE__*/React.createElement("div", {
+  }, entry.type === "a4" ? `Promo · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `Shelf Talker · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      flexWrap: "wrap",
+      alignItems: "center",
+      marginTop: 4
+    }
+  }, (entry.tags || []).map(tag => /*#__PURE__*/React.createElement("span", {
+    key: tag,
+    style: {
+      background: Y,
+      color: K,
+      fontSize: 9,
+      fontWeight: 700,
+      letterSpacing: 1,
+      padding: "2px 7px",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      gap: 3
+    },
+    onClick: () => removeTagFromEntry(entry.id, tag)
+  }, tag, " \u2715")), addingTagFor === entry.id ? /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    style: {
+      fontSize: 10,
+      padding: "2px 6px",
+      border: "1px solid #ccc",
+      fontFamily: "system-ui,sans-serif",
+      width: 80,
+      outline: "none"
+    },
+    placeholder: "tag name",
+    onBlur: () => setAddingTagFor(null),
+    onKeyDown: e => {
+      if (e.key === "Enter") {
+        addTagToEntry(entry.id, e.target.value);
+        setAddingTagFor(null);
+      }
+      if (e.key === "Escape") setAddingTagFor(null);
+    }
+  }) : (entry.tags || []).length < 5 && /*#__PURE__*/React.createElement("span", {
+    onClick: () => setAddingTagFor(entry.id),
+    style: {
+      fontSize: 9,
+      fontWeight: 700,
+      letterSpacing: 1,
+      color: K,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      textTransform: "uppercase",
+      padding: "2px 4px",
+      border: "1px dashed #aaa"
+    }
+  }, "+ Tag")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "none"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
