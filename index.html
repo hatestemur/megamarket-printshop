@@ -549,7 +549,7 @@ function PriceCard8x4({
     const startY = tierAnchorY - acc;
     return /*#__PURE__*/React.createElement(React.Fragment, null, card.nowPrice && /*#__PURE__*/React.createElement("text", {
       x: CW - 14,
-      y: startY - 8,
+      y: 80,
       textAnchor: "end",
       fill: "#000",
       fontFamily: FONT,
@@ -1101,7 +1101,7 @@ function App() {
             });
             const blockH = acc;
             const startY = yo + 112 - acc;
-            const nowRef8p = card.nowPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 112 - acc - 8) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20">' + card.nowPrice + '</text>' : '';
+            const nowRef8p = card.nowPrice ? '<text x="' + (CW - 14) + '" y="' + (yo + 80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20">' + card.nowPrice + '</text>' : '';
             priceLines = nowRef8p + tiers.map((tier, i) => {
               const fs = i === n - 1 ? lastFs : smallFs;
               const each = parseTierEach(tier);
