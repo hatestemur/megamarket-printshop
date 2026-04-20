@@ -687,7 +687,56 @@ function App() {
   const [view, setView] = useState("editor");
   const [showQueue, setShowQueue] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
-  const [libraryFilter, setLibraryFilter] = useState(null); // active tag filter
+  const [libraryFilter, setLibraryFilter] = useState(null);
+  const historyRef = React.useRef([]);
+  const historyIdxRef = React.useRef(-1);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const pushHistory = React.useCallback(() => {
+    const snapshot = {
+      form: {
+        ...form
+      },
+      cards8x4: cards8x4.map(c => ({
+        ...c
+      })),
+      editIdx8x4,
+      template
+    };
+    const stack = historyRef.current;
+    // Trim forward history when new action taken
+    const trimmed = stack.slice(0, historyIdxRef.current + 1);
+    trimmed.push(snapshot);
+    if (trimmed.length > 30) trimmed.shift();
+    historyRef.current = trimmed;
+    historyIdxRef.current = trimmed.length - 1;
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(false);
+  }, [form, cards8x4, editIdx8x4, template]);
+  const undo = React.useCallback(() => {
+    const stack = historyRef.current;
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current--;
+    const snap = stack[historyIdxRef.current];
+    setForm(snap.form);
+    setCards8x4(snap.cards8x4);
+    setEditIdx8x4(snap.editIdx8x4);
+    setTemplate(snap.template);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(historyIdxRef.current < stack.length - 1);
+  }, []);
+  const redo = React.useCallback(() => {
+    const stack = historyRef.current;
+    if (historyIdxRef.current >= stack.length - 1) return;
+    historyIdxRef.current++;
+    const snap = stack[historyIdxRef.current];
+    setForm(snap.form);
+    setCards8x4(snap.cards8x4);
+    setEditIdx8x4(snap.editIdx8x4);
+    setTemplate(snap.template);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(historyIdxRef.current < stack.length - 1);
+  }, []); // active tag filter
   const [addingTagFor, setAddingTagFor] = useState(null); // entry id being tagged
   const [drafts, setDrafts] = useState(() => {
     try {
@@ -713,16 +762,19 @@ function App() {
   const [editingLibId, setEditingLibId] = useState(null);
   const [editingLibName, setEditingLibName] = useState("");
   const [toast, setToast] = useState(null);
-  const set = (k, v) => setForm(f => {
-    const next = {
-      ...f,
-      [k]: v
-    };
-    if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
-      next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
-    }
-    return next;
-  });
+  const set = (k, v) => {
+    if (k === 'priceMode') pushHistory();
+    setForm(f => {
+      const next = {
+        ...f,
+        [k]: v
+      };
+      if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
+        next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
+      }
+      return next;
+    });
+  };
   const setTier = (i, v) => setForm(f => {
     const t = [...f.tiers];
     t[i] = v;
@@ -739,17 +791,20 @@ function App() {
     ...f,
     tiers: f.tiers.filter((_, j) => j !== i)
   }));
-  const set8 = (k, v) => setCards8x4(prev => prev.map((c, i) => {
-    if (i !== editIdx8x4) return c;
-    const next = {
-      ...c,
-      [k]: v
-    };
-    if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
-      next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
-    }
-    return next;
-  }));
+  const set8 = (k, v) => {
+    if (k === 'priceMode') pushHistory();
+    setCards8x4(prev => prev.map((c, i) => {
+      if (i !== editIdx8x4) return c;
+      const next = {
+        ...c,
+        [k]: v
+      };
+      if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
+        next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
+      }
+      return next;
+    }));
+  };
   const setTier8 = (ti, v) => setCards8x4(prev => prev.map((c, i) => {
     if (i !== editIdx8x4) return c;
     const t = [...c.tiers];
@@ -774,6 +829,22 @@ function App() {
   // Persist cards to localStorage
   const STORAGE_KEY_A4 = "megamarket_cards_a4";
   const STORAGE_KEY_8X4 = "megamarket_cards_8x4";
+  // Keyboard undo/redo
+  React.useEffect(() => {
+    const handler = e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, redo]);
   React.useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_A4, JSON.stringify(cards));
@@ -1009,6 +1080,7 @@ function App() {
   };
   const save = () => {
     if (!canSave) return;
+    pushHistory();
     if (editIdx !== null) {
       setCards(c => c.map((x, i) => i === editIdx ? {
         ...form
@@ -1843,7 +1915,35 @@ function App() {
       flexShrink: 0
     },
     title: "Unsaved changes"
-  }), (cards.length > 0 || batch8x4.length > 0) && /*#__PURE__*/React.createElement("button", {
+  }), canUndo && /*#__PURE__*/React.createElement("button", {
+    onClick: undo,
+    title: "Undo (\u2318Z)",
+    style: {
+      background: "rgba(255,255,255,0.12)",
+      color: W,
+      border: "none",
+      padding: "8px 10px",
+      fontWeight: 800,
+      fontSize: 13,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      letterSpacing: 0
+    }
+  }, "\u21A9"), canRedo && /*#__PURE__*/React.createElement("button", {
+    onClick: redo,
+    title: "Redo (\u2318\u21E7Z)",
+    style: {
+      background: "rgba(255,255,255,0.12)",
+      color: W,
+      border: "none",
+      padding: "8px 10px",
+      fontWeight: 800,
+      fontSize: 13,
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif",
+      letterSpacing: 0
+    }
+  }, "\u21AA"), (cards.length > 0 || batch8x4.length > 0) && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowQueue(q => !q);
       setShowDrafts(false);
