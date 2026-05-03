@@ -1309,7 +1309,10 @@ function App() {
         return [];
       }
     }).join("\n");
-    if (template === "a4") {
+    // Detect from queue what to export — avoids stale closure issues with template state
+    const _exportA4 = queueReady.some(q => q.type === "a4") || template === "a4";
+    const _export8x4 = queueReady.some(q => q.type === "8x4") || template === "8x4";
+    if (_exportA4 && !queueReady.some(q => q.type === "8x4")) {
       const CW = 420,
         CH = 594,
         sideW = 92,
@@ -1403,7 +1406,7 @@ function App() {
       pdf.save("megamarket-a4-" + Date.now() + ".pdf");
       setQueue(q => q.filter(i => !(i.type === 'a4' && i.status === 'ready')));
       showToast("PDF downloaded & saved to library ✓");
-    } else {
+    } else if (_export8x4) {
       const CW = 420,
         CH = 148,
         sideW = 64,
@@ -2347,8 +2350,7 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -2365,8 +2367,7 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -2605,8 +2606,7 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -2623,8 +2623,7 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -2863,8 +2862,7 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -2881,8 +2879,7 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -3121,8 +3118,7 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -3139,8 +3135,7 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -3407,8 +3402,7 @@ function App() {
     }
   }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
@@ -3425,8 +3419,7 @@ function App() {
     }
   }, "\u2399 Promo (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
+      exportPDF();
       setShowQueue(false);
     },
     style: {
