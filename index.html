@@ -4548,39 +4548,4 @@ function App() {
     domRoot.render(React.createElement(App));
   </script>
 </body>
-</html
-    exportBlank = async () => {
-      const CW = 420, CH = 148, xStart = 116, sideW = 64, CARD_W = 304, R = "#CC2222", Y = "#FEDE00", W = "#FFFFFF", K = "#000000";
-      const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
-      const logoBotR = Math.round(800 * sideW / 607.7);
-      const svgScale = 3;
-      const svgs = [0,1,2,3].map(row => {
-        const yo = row * CH;
-        return '<g>' +
-          '<rect x="0" y="' + yo + '" width="' + CW + '" height="' + CH + '" fill="' + W + '"/>' +
-          '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="' + Y + '"/>' +
-          '<path d="' + logoPath + '" transform="translate(' + xStart + ',' + yo + ') scale(' + (sideW/607.7) + ')" fill="' + K + '"/>' +
-          '<rect x="' + xStart + '" y="' + (yo+logoBotR) + '" width="' + sideW + '" height="' + (CH-logoBotR) + '" fill="' + R + '"/>' +
-          '<line x1="' + xStart + '" y1="' + yo + '" x2="' + xStart + '" y2="' + (yo+CH) + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="4,3"/>' +
-          (row < 3 ? '<line x1="0" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ccc" stroke-width="0.5" stroke-dasharray="4,3"/>' : '') +
-        '</g>';
-      });
-      const totalH = CH * 4;
-      const svgStr = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ' + CW + ' ' + totalH + '" width="' + CW + '" height="' + totalH + '">' + svgs.join('') + '</svg>';
-      const canvas = document.createElement('canvas');
-      canvas.width = CW * svgScale; canvas.height = totalH * svgScale;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const img = new Image();
-      await new Promise(res => {
-        img.onload = res;
-        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
-      });
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-      pdf.save('megamarket-blank-shelf-talker-' + Date.now() + '.pdf');
-    };
->
+</html>
