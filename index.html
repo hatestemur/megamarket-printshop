@@ -1314,6 +1314,31 @@ function App() {
         CH = 594,
         sideW = 92,
         badgeH = 100;
+      const a4PriceSVG = card => {
+        if (card.priceMode === "multibuy") {
+          const tiers = (card.tiers || []).filter(t => t && t.trim());
+          const n = tiers.length || 1;
+          const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
+          const availW = CW - 18 - sideW - 20;
+          const capFs = Math.floor(availW / (maxTierLen * 0.55));
+          const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
+          const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
+          const ys = [];
+          let acc = 0;
+          tiers.forEach((_, i) => { const fs = i === n - 1 ? lastFs : smallFs; ys.push(acc + fs * 0.78); acc += fs * 1.25; });
+          const startY = 494 - 14 - acc;
+          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30">' + card.nowPrice + '</text>' : '';
+          return nowRef + tiers.map((tier, i) => {
+            const fs = i === n - 1 ? lastFs : smallFs;
+            const each = parseTierEach(tier);
+            return '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 18) + '" y="' + (startY + ys[i] + Math.round(lastFs * 0.28) + 18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + each + '</text>' : '');
+          }).join("");
+        }
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
+        const nowLine = '<text x="' + (CW - 18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + card.nowPrice + '</text>';
+        const unitLine = card.unitPrice ? '<text x="' + (CW - 18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : "";
+        return wasLine + nowLine + unitLine;
+      };
       const readyA4 = queueReady.filter(q => q.type === "a4").map(q => q.data);
       const pages = (readyA4.length ? readyA4 : [form]).map(card => {
         const badge = "SPECIAL OFFER";
