@@ -1312,6 +1312,7 @@ function App() {
     // Detect from queue what to export — avoids stale closure issues with template state
     const _exportA4 = queueReady.some(q => q.type === "a4") || template === "a4";
     const _export8x4 = queueReady.some(q => q.type === "8x4") || template === "8x4";
+    console.log("[EXPORT] template=",template,"queueReady=",JSON.stringify(queueReady.map(q=>({type:q.type,status:q.status,name:q.name}))), "_exportA4=",_exportA4,"_export8x4=",_export8x4);
     if (_exportA4 && !queueReady.some(q => q.type === "8x4")) {
       const CW = 420,
         CH = 594,
@@ -1321,6 +1322,7 @@ function App() {
       const { jsPDF } = window.jspdf;
       const readyA4 = queueReady.filter(q => q.type === "a4").map(q => q.data);
       const cards_a4 = readyA4.length ? readyA4 : [form];
+      console.log("[EXPORT A4] cards_a4 count=",cards_a4.length, "first=",JSON.stringify(cards_a4[0]));
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       cards_a4.forEach((card, idx) => {
         if (idx > 0) pdf.addPage("a4", "portrait");
@@ -1402,6 +1404,7 @@ function App() {
           pdf.text("Valid until " + card.validUntil, ml, 285);
         }
       });
+      console.log("[EXPORT A4] calling pdf.save");
       saveToLibrary();
       pdf.save("megamarket-a4-" + Date.now() + ".pdf");
       setQueue(q => q.filter(i => !(i.type === 'a4' && i.status === 'ready')));
