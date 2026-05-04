@@ -1309,107 +1309,31 @@ function App() {
         return [];
       }
     }).join("\n");
-    // Detect from queue what to export — avoids stale closure issues with template state
-    const _exportA4 = queueReady.some(q => q.type === "a4") || template === "a4";
-    const _export8x4 = queueReady.some(q => q.type === "8x4") || template === "8x4";
-    console.log("[EXPORT] template=",template,"queueReady=",JSON.stringify(queueReady.map(q=>({type:q.type,status:q.status,name:q.name}))), "_exportA4=",_exportA4,"_export8x4=",_export8x4);
-    if (_exportA4 && !queueReady.some(q => q.type === "8x4")) {
+    if (template === "a4") {
       const CW = 420,
         CH = 594,
         sideW = 92,
         badgeH = 100;
-      // ── Direct jsPDF text export (no SVG→canvas, avoids blank-page rendering issues) ──
-      const { jsPDF } = window.jspdf;
       const readyA4 = queueReady.filter(q => q.type === "a4").map(q => q.data);
-      const cards_a4 = readyA4.length ? readyA4 : [form];
-      console.log("[EXPORT A4] cards_a4 count=",cards_a4.length, "first=",JSON.stringify(cards_a4[0]));
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      cards_a4.forEach((card, idx) => {
-        if (idx > 0) pdf.addPage("a4", "portrait");
-        const W = 210, H = 297, ml = 12, mr = 198;
-        pdf.setTextColor(0, 0, 0);
-
-        // Product name — scale font to fit
-        const nameStr = card.productName || "";
-        const namePt = nameStr.length > 40 ? 16 : nameStr.length > 28 ? 20 : nameStr.length > 16 ? 22 : 26;
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(namePt);
-        pdf.text(nameStr, ml, 22);
-
-        // Size
-        let yAfterName = 22 + namePt * 0.352778 + 3;
-        if (card.size) {
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(12);
-          pdf.text(card.size, ml, yAfterName + 6);
-        }
-
-        // Prices
-        if (card.priceMode === "multibuy") {
-          const tiers = (card.tiers || []).filter(t => t && t.trim());
-          // ref single price small
-          if (card.nowPrice) {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(14);
-            pdf.text(card.nowPrice, mr, 120, { align: "right" });
-          }
-          // tiers stacked above center
-          const n = tiers.length || 1;
-          const tierPt = Math.min(48, Math.max(14, Math.floor(52 / n)));
-          const tierH  = tierPt * 0.352778 + 4;
-          const blockH = tierH * n;
-          const startY = 160 - blockH / 2 + tierH;
-          tiers.forEach((tier, i) => {
-            const fs = i === n - 1 ? tierPt : Math.round(tierPt * 0.7);
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(fs);
-            pdf.text(tier, mr, startY + i * (fs * 0.352778 + 4), { align: "right" });
-          });
-          // unit price / each
-          if (card.unitPrice) {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(10);
-            pdf.text(card.unitPrice, mr, startY + n * (tierPt * 0.352778 + 4), { align: "right" });
-          }
-        } else {
-          // Was price with strikethrough
-          if (card.wasPrice && card.priceMode === "wasnow") {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(20);
-            const wasTxt = card.wasPrice;
-            const wasX = mr - pdf.getTextWidth(wasTxt);
-            pdf.text(wasTxt, mr, 130, { align: "right" });
-            // strikethrough line
-            const lineY = 130 - 20 * 0.352778 * 0.35;
-            pdf.setDrawColor(0);
-            pdf.setLineWidth(0.4);
-            pdf.line(wasX, lineY, mr, lineY);
-          }
-          // Now price — large
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(60);
-          pdf.text(card.nowPrice || "", mr, 165, { align: "right" });
-          // Unit price
-          if (card.unitPrice) {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(11);
-            pdf.text(card.unitPrice, mr, 178, { align: "right" });
-          }
-        }
-
-        // Valid until
-        if (card.validUntil) {
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(9);
-          pdf.text("Valid until " + card.validUntil, ml, 285);
-        }
+      const pages = (readyA4.length ? readyA4 : [form]).map(card => {
+        const badge = "SPECIAL OFFER";
+        const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
+        const nameLen = (card.productName || "").length;
+        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
+        const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+        const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
+        const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<defs><style>' + fontStyle + '</style></defs>' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + (card.productName || "") + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + (card.validUntil ? '<text x="' + (sideW + 18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '') + '</svg>';
+        return {
+          svgString,
+          widthMm: 210,
+          heightMm: 297
+        };
       });
-      console.log("[EXPORT A4] calling pdf.save");
       saveToLibrary();
-      pdf.save("megamarket-a4-" + Date.now() + ".pdf");
+      await downloadPDF(pages, "megamarket-a4-" + Date.now() + ".pdf");
       setQueue(q => q.filter(i => !(i.type === 'a4' && i.status === 'ready')));
       showToast("PDF downloaded & saved to library ✓");
-    } else if (_export8x4) {
+    } else {
       const CW = 420,
         CH = 148,
         sideW = 64,
@@ -2353,7 +2277,8 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -2370,7 +2295,8 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -2609,7 +2535,8 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -2626,7 +2553,8 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -2865,7 +2793,8 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -2882,7 +2811,8 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -3121,7 +3051,8 @@ function App() {
     }
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -3138,7 +3069,8 @@ function App() {
     }
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -3405,7 +3337,8 @@ function App() {
     }
   }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("a4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -3422,7 +3355,8 @@ function App() {
     }
   }, "\u2399 Promo (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      exportPDF();
+      setTemplate("8x4");
+      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
     },
     style: {
@@ -4589,4 +4523,39 @@ function App() {
     domRoot.render(React.createElement(App));
   </script>
 </body>
-</html>
+</html
+    exportBlank = async () => {
+      const CW = 420, CH = 148, xStart = 116, sideW = 64, CARD_W = 304, R = "#CC2222", Y = "#FEDE00", W = "#FFFFFF", K = "#000000";
+      const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
+      const logoBotR = Math.round(800 * sideW / 607.7);
+      const svgScale = 3;
+      const svgs = [0,1,2,3].map(row => {
+        const yo = row * CH;
+        return '<g>' +
+          '<rect x="0" y="' + yo + '" width="' + CW + '" height="' + CH + '" fill="' + W + '"/>' +
+          '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="' + Y + '"/>' +
+          '<path d="' + logoPath + '" transform="translate(' + xStart + ',' + yo + ') scale(' + (sideW/607.7) + ')" fill="' + K + '"/>' +
+          '<rect x="' + xStart + '" y="' + (yo+logoBotR) + '" width="' + sideW + '" height="' + (CH-logoBotR) + '" fill="' + R + '"/>' +
+          '<line x1="' + xStart + '" y1="' + yo + '" x2="' + xStart + '" y2="' + (yo+CH) + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="4,3"/>' +
+          (row < 3 ? '<line x1="0" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ccc" stroke-width="0.5" stroke-dasharray="4,3"/>' : '') +
+        '</g>';
+      });
+      const totalH = CH * 4;
+      const svgStr = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ' + CW + ' ' + totalH + '" width="' + CW + '" height="' + totalH + '">' + svgs.join('') + '</svg>';
+      const canvas = document.createElement('canvas');
+      canvas.width = CW * svgScale; canvas.height = totalH * svgScale;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const img = new Image();
+      await new Promise(res => {
+        img.onload = res;
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+      });
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+      pdf.save('megamarket-blank-shelf-talker-' + Date.now() + '.pdf');
+    };
+>
