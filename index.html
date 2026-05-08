@@ -727,6 +727,8 @@ function App() {
       return [];
     }
   });
+  const queueRef = React.useRef(queue);
+  queueRef.current = queue; // always current — no closure staleness
   React.useEffect(() => {
     try {
       localStorage.setItem('mm_queue', JSON.stringify(queue));
@@ -1339,9 +1341,8 @@ function App() {
         const unitLine = card.unitPrice?'<text x="'+(CW-18)+'" y="466" text-anchor="end" fill="#000" font-family="'+XFONT+'" font-size="17">'+card.unitPrice+'</text>':"";
         return wasLine+nowLine+unitLine;
       };
-      // Read from localStorage to avoid stale closure
-      let liveQueue = queue;
-      try { liveQueue = JSON.parse(localStorage.getItem("mm_queue")||"[]"); } catch(e){}
+      // queueRef.current is always up-to-date (updated synchronously via useEffect)
+      const liveQueue = queueRef.current;
       const readyA4 = liveQueue.filter(q=>q.type==="a4"&&q.status==="ready").map(q=>q.data);
       const allA4   = liveQueue.filter(q=>q.type==="a4").map(q=>q.data);
       const src = readyA4.length ? readyA4 : allA4.length ? allA4 : [form];
