@@ -1316,8 +1316,13 @@ function App() {
         badgeH = 100;
       // ── jsPDF native text export — bypasses SVG→canvas (fonts always render) ──
       const { jsPDF } = window.jspdf;
+      // Export ready items first, then any working items, then current form
       const readyA4 = queueReady.filter(q => q.type === "a4").map(q => q.data);
-      const cards_a4 = readyA4.length ? readyA4 : [form];
+      const allA4 = queue.filter(q => q.type === "a4").map(q => q.data);
+      const candidates = readyA4.length ? readyA4 : allA4.length ? allA4 : [form];
+      // Skip completely empty cards
+      const cards_a4 = candidates.filter(c => c.productName || c.nowPrice);
+      if (!cards_a4.length) { showToast("Nothing to export — add a card first"); return; }
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       const W = 210, ml = 14, mr = 196;
 
