@@ -1312,6 +1312,9 @@ function App() {
     const fontStyle = window._getFontCSS ? window._getFontCSS() : "";
     const liveQueue = window._mmQueue || [];
     const activeTemplate = forceTemplate || template;
+    // Debug — remove after fix
+    showToast("DEBUG: tmpl=" + activeTemplate + " q=" + liveQueue.length + " form=" + (form.productName||"?") + " raw=" + JSON.stringify(liveQueue).slice(0,80));
+    await new Promise(r => setTimeout(r, 2000));
 
     if (activeTemplate === "a4") {
       const CW = 420, CH = 594, sideW = 92, badgeH = 100;
