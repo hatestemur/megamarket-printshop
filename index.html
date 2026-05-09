@@ -622,26 +622,6 @@ function App() {
     unitPrice: "50p per 100ml",
     priceMode: "single"
   });
-  const [cards, setCards] = useState(() => {
-    try {
-      const s = localStorage.getItem('megamarket_cards_a4');
-      if (s) return JSON.parse(s);
-    } catch (e) {}
-    return [{
-      productName: "Cypressa Extra Virgin Olive Oil",
-      size: "5000ml",
-      wasPrice: "29.99",
-      nowPrice: "29.99",
-      unitPrice: "60p per 100ml",
-      badgeText: "SPECIAL OFFER",
-      badgeBg: R,
-      badgeFg: K,
-      priceMode: "single",
-      tiers: ["", ""]
-    }];
-  });
-  const [editIdx, setEditIdx] = useState(null);
-  const [tab, setTab] = useState("editor");
   const [template, setTemplate] = useState("a4");
   const [cards8x4, setCards8x4] = useState(() => {
     try {
@@ -663,68 +643,7 @@ function App() {
     }));
   });
   const [editIdx8x4, setEditIdx8x4] = useState(0);
-  const [batch8x4, setBatch8x4] = useState(() => {
-    try {
-      const s = localStorage.getItem('megamarket_batch8x4');
-      if (s) return JSON.parse(s);
-    } catch (e) {}
-    return [];
-  });
-  const [tab8x4, setTab8x4] = useState("editor");
-  const [view, setView] = useState("editor");
   const [showQueue, setShowQueue] = useState(false);
-  const [showDrafts, setShowDrafts] = useState(false);
-  const historyRef = React.useRef([]);
-  const historyIdxRef = React.useRef(-1);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  const pushHistory = React.useCallback(() => {
-    const snapshot = {
-      form: {
-        ...form
-      },
-      cards8x4: cards8x4.map(c => ({
-        ...c
-      })),
-      editIdx8x4,
-      template
-    };
-    const stack = historyRef.current;
-    // Trim forward history when new action taken
-    const trimmed = stack.slice(0, historyIdxRef.current + 1);
-    trimmed.push(snapshot);
-    if (trimmed.length > 30) trimmed.shift();
-    historyRef.current = trimmed;
-    historyIdxRef.current = trimmed.length - 1;
-    setCanUndo(historyIdxRef.current > 0);
-    setCanRedo(false);
-  }, [form, cards8x4, editIdx8x4, template]);
-  const undo = React.useCallback(() => {
-    const stack = historyRef.current;
-    if (historyIdxRef.current <= 0) return;
-    historyIdxRef.current--;
-    const snap = stack[historyIdxRef.current];
-    setForm(snap.form);
-    setCards8x4(snap.cards8x4);
-    setEditIdx8x4(snap.editIdx8x4);
-    setTemplate(snap.template);
-    setCanUndo(historyIdxRef.current > 0);
-    setCanRedo(historyIdxRef.current < stack.length - 1);
-  }, []);
-  const redo = React.useCallback(() => {
-    const stack = historyRef.current;
-    if (historyIdxRef.current >= stack.length - 1) return;
-    historyIdxRef.current++;
-    const snap = stack[historyIdxRef.current];
-    setForm(snap.form);
-    setCards8x4(snap.cards8x4);
-    setEditIdx8x4(snap.editIdx8x4);
-    setTemplate(snap.template);
-    setCanUndo(historyIdxRef.current > 0);
-    setCanRedo(historyIdxRef.current < stack.length - 1);
-  }, []); // active tag filter
-  const [addingTagFor, setAddingTagFor] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [queue, setQueue] = useState(() => {
     try {
       const s = localStorage.getItem('mm_queue');
@@ -821,29 +740,13 @@ function App() {
     }
     removeQueue(item.id);
     setShowQueue(false);
-    setLandingDone(true);
     showToast('Loaded into editor ✓');
-  }; // mobile preview toggle // entry id being tagged
-  const [drafts, setDrafts] = useState(() => {
-    try {
-      const s = localStorage.getItem("mm_drafts");
-      return s ? JSON.parse(s) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-  React.useEffect(() => {
-    try {
-      localStorage.setItem("mm_drafts", JSON.stringify(drafts));
-    } catch (e) {}
-  }, [drafts]);
-  const [landingDone, setLandingDone] = useState(true);
+  };
   const [toast, setToast] = useState(null);
   const _isDemoForm = f =>
     f.productName === "Cypressa Extra Virgin Olive Oil" &&
     f.nowPrice === "£24.99" && f.size === "5000ml";
   const set = (k, v) => {
-    if (k === 'priceMode') pushHistory();
     setForm(f => {
       const base = _isDemoForm(f) ? {...EMPTY} : f;
       const next = { ...base, [k]: v };
@@ -870,7 +773,6 @@ function App() {
     tiers: f.tiers.filter((_, j) => j !== i)
   }));
   const set8 = (k, v) => {
-    if (k === 'priceMode') pushHistory();
     setCards8x4(prev => prev.map((c, i) => {
       if (i !== editIdx8x4) return c;
       const next = {
@@ -904,340 +806,21 @@ function App() {
   const canSave8 = card8.productName && (card8.priceMode === "multibuy" ? (card8.tiers[0] || "").trim() : card8.priceMode === "wasnow" ? card8.wasPrice && card8.nowPrice : card8.nowPrice);
   const canSave = form.productName && (form.priceMode === "multibuy" ? (form.tiers[0] || "").trim() : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
 
-  // Persist cards to localStorage
-  const STORAGE_KEY_A4 = "megamarket_cards_a4";
-  const STORAGE_KEY_8X4 = "megamarket_cards_8x4";
-  // Keyboard undo/redo
-  React.useEffect(() => {
-    const handler = e => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-        if (e.shiftKey) {
-          e.preventDefault();
-          redo();
-        } else {
-          e.preventDefault();
-          undo();
-        }
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        addToQueue('ready', true);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
-        e.preventDefault();
-        exportPDF(template, queue);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo]);
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_A4, JSON.stringify(cards));
-    } catch (e) {}
-  }, [cards]);
   React.useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_8X4, JSON.stringify(cards8x4));
     } catch (e) {}
   }, [cards8x4]);
-  const STORAGE_KEY_BATCH8 = "megamarket_batch8x4";
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_BATCH8, JSON.stringify(batch8x4));
-    } catch (e) {}
-  }, [batch8x4]);
-  const saveDraft = () => {
-    var _cards8x4$editIdx8x;
-    const draft = {
-      id: Date.now(),
-      name: (template === "a4" ? form.productName : (_cards8x4$editIdx8x = cards8x4[editIdx8x4]) === null || _cards8x4$editIdx8x === void 0 ? void 0 : _cards8x4$editIdx8x.productName) || "Untitled",
-      template,
-      savedAt: new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit"
-      }),
-      // A4: save current form
-      form: template === "a4" ? {
-        ...form
-      } : null,
-      // 8x4: save current card slot
-      card8: template === "8x4" ? {
-        ...cards8x4[editIdx8x4]
-      } : null,
-      editIdx8x4: template === "8x4" ? editIdx8x4 : null
-    };
-    setDrafts(d => {
-      const next = [draft, ...d.filter(x => x.id !== draft.id)].slice(0, 5);
-      return next;
-    });
-    showToast("Draft saved ✓");
-  };
-  const loadDraft = draft => {
-    if (draft.template === "a4") {
-      setTemplate("a4");
-      setForm({
-        ...EMPTY,
-        ...draft.form
-      });
-      setEditIdx(null);
-      setTab("editor");
-    } else {
-      setTemplate("8x4");
-      setCards8x4(prev => prev.map((c, i) => i === draft.editIdx8x4 ? {
-        ...c,
-        ...draft.card8
-      } : c));
-      setEditIdx8x4(draft.editIdx8x4);
-      setTab8x4("editor");
-    }
-    setShowDrafts(false);
-    setLandingDone(true);
-    showToast("Draft loaded ✓");
-  };
-  const deleteDraft = id => setDrafts(d => d.filter(x => x.id !== id));
 
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
-  const autoName = (tmpl, cds) => {
-    var _cds$, _cds$find;
-    const first = tmpl === "a4" ? (_cds$ = cds[0]) === null || _cds$ === void 0 ? void 0 : _cds$.productName : (_cds$find = cds.find(c => c.productName)) === null || _cds$find === void 0 ? void 0 : _cds$find.productName;
-    const date = new Date().toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short"
-    });
-    return first ? `${first.split(" ").slice(0, 3).join(" ")} · ${date}` : `${tmpl === "a4" ? "A4" : "8×4"} · ${date}`;
-  };
-  const addSheetToBatch8 = () => {
-    setBatch8x4(b => [...b, [...cards8x4]]);
-    setCards8x4([0, 1, 2, 3].map(() => ({
-      productName: "",
-      size: "",
-      wasPrice: "",
-      nowPrice: "",
-      unitPrice: "",
-      badgeText: "SPECIAL OFFER",
-      badgeBg: R,
-      badgeFg: K,
-      priceMode: "single",
-      tiers: ["", ""],
-      validUntil: ""
-    })));
-    setEditIdx8x4(0);
-    setTab8x4("batch");
-    showToast("Sheet added to queue ✓");
-  };
-  const startEditSheet8 = i => {
-    setCards8x4([...batch8x4[i]]);
-    setEditIdx8x4(0);
-    setBatch8x4(b => b.filter((_, j) => j !== i));
-    setTab8x4("editor");
-  };
-  const delSheet8 = i => setBatch8x4(b => b.filter((_, j) => j !== i));
-  const dupeSheet8 = i => setBatch8x4(b => [...b.slice(0, i + 1), [...b[i]], ...b.slice(i + 1)]);
   const canAddSheet = cards8x4.some(c => c.productName);
 
   // Export blank template
-  const exportBlank = async () => {
-    const fontStyle = window._getFontCSS ? window._getFontCSS() : '';
-    const logoPath = 'M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z';
-    showToast('Generating blank template…');
-    if (template === 'a4') {
-      const CW = 420, CH = 594, sideW = 92, badgeH = 100;
-      const badge = 'SPECIAL OFFER';
-      const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-      const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">'
-        + '<defs><style>' + fontStyle + '</style></defs>'
-        + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>'
-        + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="#000"/>'
-        + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>'
-        + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>'
-        + '<text x="' + (CW / 2) + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>'
-        + '</svg>';
-      await downloadPDF([{ svgString, widthMm: 210, heightMm: 297 }], 'megamarket-blank-a4.pdf');
-      showToast('Blank A4 template downloaded ✓');
-    } else {
-      const CW = 420, CH = 148, sideW = 64, CARD_W = 304, xStart = CW - CARD_W;
-      const logoBotR = Math.round(800 * sideW / 607.7);
-      const scaleX = (sideW / 607.7).toFixed(5);
-      const badge = 'SPECIAL OFFER';
-      const longestWord = Math.max(...badge.split(' ').map(w => w.length));
-      const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (longestWord * 0.62))));
-      const cardRows = [0,1,2,3].map(ci => {
-        const yo = ci * CH;
-        return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>'
-          + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>'
-          + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + (CH - logoBotR) + '" fill="#CC2222"/>'
-          + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>'
-          + '<text x="' + (xStart + sideW / 2) + '" y="' + (yo + logoBotR + (CH - logoBotR) * 0.46) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">SPECIAL</text>'
-          + '<text x="' + (xStart + sideW / 2) + '" y="' + (yo + logoBotR + (CH - logoBotR) * 0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>'
-          + (ci < 3 ? '<line x1="' + xStart + '" y1="' + ((ci + 1) * CH) + '" x2="' + CW + '" y2="' + ((ci + 1) * CH) + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
-      }).join('');
-      const svgString = '<svg width="' + CW + '" height="' + (CH * 4) + '" viewBox="0 0 ' + CW + ' ' + (CH * 4) + '" xmlns="http://www.w3.org/2000/svg">'
-        + '<defs><style>' + fontStyle + '</style></defs>'
-        + '<rect width="' + xStart + '" height="' + (CH * 4) + '" fill="white"/>'
-        + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + (CH * 4) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
-        + cardRows
-        + '</svg>';
-      await downloadPDF([{ svgString, widthMm: 210, heightMm: 297 }], 'megamarket-blank-8x4.pdf');
-      showToast('Blank shelf talker template downloaded ✓');
-    }
-  };
 
     const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : cards8x4.some(c => c.productName));
-  const clearCurrent = () => {
-    if (template === "a4") {
-      setCards([]);
-      setForm({
-        ...EMPTY
-      });
-      setEditIdx(null);
-      setTab("editor");
-    } else {
-      setCards8x4([0, 1, 2, 3].map(() => ({
-        productName: "",
-        size: "",
-        wasPrice: "",
-        nowPrice: "",
-        unitPrice: "",
-        badgeText: "SPECIAL OFFER",
-        badgeBg: R,
-        badgeFg: K,
-        priceMode: "single",
-        tiers: ["", ""],
-        validUntil: ""
-      })));
-      setBatch8x4([]);
-      setEditIdx8x4(0);
-      setTab8x4("editor");
-    }
-  };
-  const save = () => {
-    if (!canSave) return;
-    pushHistory();
-    if (editIdx !== null) {
-      setCards(c => c.map((x, i) => i === editIdx ? {
-        ...form
-      } : x));
-      setEditIdx(null);
-      showToast("Card updated in queue ✓");
-    } else {
-      setCards(c => [...c, {
-        ...form
-      }]);
-      showToast("Card added to queue ✓");
-    }
-    setForm({
-      ...EMPTY
-    });
-    setTab("batch");
-  };
-  const printAll = () => {
-    const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
-    // Build A4 pages
-    const CWa = 420,
-      CHa = 594,
-      sideWa = 92,
-      badgeH = 100;
-    const a4Pages = cards.map(card => {
-      const badge = "SPECIAL OFFER";
-      const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-      const nameLen = (card.productName || "").length;
-      const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
-      // Word-wrap product name for SVG export
-      const nameX = sideWa + 18;
-      const nameAvailW = CWa - sideWa - 28;
-      const nameLineH = Math.round(nameFontSize * 1.25);
-      const nameCharW = nameFontSize * 0.54;
-      const nameWords = (card.productName || "").split(" ");
-      const nameLines = [];
-      let nameCur = "";
-      for (const w of nameWords) {
-        const test = nameCur ? nameCur + " " + w : w;
-        if (test.length * nameCharW > nameAvailW && nameCur) { nameLines.push(nameCur); nameCur = w; }
-        else { nameCur = test; }
-      }
-      if (nameCur) nameLines.push(nameCur);
-      const nameTextSVG = nameLines.map((line, i) =>
-        '<text x="' + nameX + '" y="' + (14 + nameFontSize + i * nameLineH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + line + '</text>'
-      ).join("");
-      const nameBlockH = nameFontSize + (nameLines.length - 1) * nameLineH;
-      const sizeY = 14 + nameBlockH + Math.round(nameFontSize * 0.4) + 17;
-      const sizeText = card.size ? '<text x="' + (sideWa + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
-      return '<div class="page">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CWa + ' ' + CHa + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CWa + '" height="' + CHa + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideWa + '" height="' + CHa + '" fill="black"/>' + '<g transform="scale(' + (sideWa / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + nameTextSVG + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CHa - badgeH) + '" width="' + CWa + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CWa / 2 + '" y="' + (CHa - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="' + XFONT + '" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + (card.validUntil ? '<text x="' + (sideWa + 18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '') + '</svg></div>';
-    }).join("");
-    // Build 8x4 sheets
-    const CW8 = 420,
-      CH8 = 148,
-      sideW8 = 64;
-    const CARD_W = 304,
-      xStart = CW8 - CARD_W;
-    const sheetPages = batch8x4.map((sheet, si) => {
-      const svgContent = '<svg viewBox="0 0 ' + CW8 + ' ' + CH8 * 4 + '" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">' + '<rect x="0" y="0" width="' + xStart + '" height="' + CH8 * 4 + '" fill="white"/>' + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + CH8 * 4 + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' + sheet.map((card, ci) => {
-        const badge = "SPECIAL OFFER";
-        const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (Math.max(...badge.split(" ").map(w => w.length)) * 0.62))));
-        const logoBotR = Math.round(800 * sideW8 / 607.7);
-        const scaleX = (sideW8 / 607.7).toFixed(5);
-        const yo = ci * CH8;
-        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<foreignObject x="' + (xStart + sideW8 + 12) + '" y="' + (yo + 64) + '" width="' + (CARD_W - sideW8 - 20) + '" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:\"MadaniArabic\",sans-serif;font-weight:400;font-size:20px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">' + card.wasPrice + '</div></foreignObject>' : '';
-        const nowLine = '<text x="' + (CW8 - 14) + '" y="' + (yo + 116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + card.nowPrice + '</text>';
-        const unitLine = card.unitPrice ? '<text x="' + (CW8 - 14) + '" y="' + (yo + 130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
-        return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH8 + '" fill="white"/>' + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW8 + '" height="' + logoBotR + '" fill="#000"/>' + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW8 + '" height="' + (CH8 - logoBotR) + '" fill="#CC2222"/>' + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (xStart + sideW8/2) + '" y="' + (yo + logoBotR + (CH8-logoBotR)*0.46) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">SPECIAL</text>' + '<text x="' + (xStart + sideW8/2) + '" y="' + (yo + logoBotR + (CH8-logoBotR)*0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>' + (card.validUntil ? '<text x="' + (xStart + sideW + 12) + '" y="' + (yo + 142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '') + '<foreignObject x="' + (xStart + sideW8 + 12) + '" y="' + (yo + 5) + '" width="' + (CARD_W - sideW8 - 20) + '" height="60"><div xmlns="http://www.w3.org/1999/xhtml"><div style="font-family:MadaniArabic,sans-serif;font-weight:500;font-size:17px;line-height:1.2;color:#000">' + card.productName + '</div>' + (card.size ? '<div style="font-family:MadaniArabic,sans-serif;font-size:10px;color:#000;margin-top:2px">' + card.size + '</div>' : '') + '</div></foreignObject>' + wasLine + nowLine + unitLine + (ci < 3 ? '<line x1="' + xStart + '" y1="' + (ci + 1) * CH8 + '" x2="' + CW8 + '" y2="' + (ci + 1) * CH8 + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
-      }).join("") + '</svg>';
-      return '<div class="page" style="page-break-after:' + (si < batch8x4.length - 1 || cards.length > 0 ? 'always' : 'auto') + '">' + svgContent + '</div>';
-    }).join("");
-    const css = window._getFontCSS() + "@page{size:Promotional Card;margin:0}" + "*{box-sizing:border-box;margin:0;padding:0}" + "html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + ".page{width:100vw;height:100vh;overflow:hidden;page-break-after:always;page-break-inside:avoid}" + ".page:last-child{page-break-after:auto}" + ".page svg{display:block;width:100vw;height:100vh}" + 'svg[viewBox*="592"]{height:auto!important}';
-    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + (batch8x4.length > 0 ? sheetPages : "") + (cards.length > 0 ? a4Pages : "") + '</body></html>';
-    const loadHtml2pdf = () => new Promise(res => {
-      if (window.html2pdf) return res();
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      s.onload = res;
-      document.head.appendChild(s);
-    });
-    const pdfContainer = document.createElement('div');
-    pdfContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;';
-    pdfContainer.innerHTML = '<style>.page{page-break-after:always;page-break-inside:avoid}.page:last-child{page-break-after:auto}</style>' + html;
-    document.body.appendChild(pdfContainer);
-    showToast("Generating PDF…");
-    loadHtml2pdf().then(() => {
-      html2pdf().set({
-        margin: 0,
-        filename: 'megamarket-print-queue.pdf',
-        image: {
-          type: 'png',
-          quality: 1
-        },
-        html2canvas: {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait'
-        },
-        pagebreak: {
-          mode: ['css'],
-          before: '.page'
-        }
-      }).from(pdfContainer).save().then(() => {
-        try {
-          document.body.removeChild(pdfContainer);
-        } catch (e) {}
-        setCards([]);
-        setBatch8x4([]);
-        setShowQueue(false);
-        showToast("PDF downloaded ✓");
-      });
-    });
-  };
   const exportPDF = async (forceTemplate, passedQueue) => {
     const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
     const fontStyle = window._getFontCSS ? window._getFontCSS() : "";
@@ -1378,189 +961,6 @@ function App() {
       showToast("PDF downloaded ✓");
     }
   };
-  const startEdit = i => {
-    setForm({
-      ...cards[i]
-    });
-    setEditIdx(i);
-    setTab("editor");
-  };
-  const del = i => {
-    setCards(c => c.filter((_, j) => j !== i));
-    if (editIdx === i) {
-      setEditIdx(null);
-      setForm({
-        ...EMPTY
-      });
-    }
-  };
-  const dupe = i => setCards(c => [...c.slice(0, i + 1), {
-    ...c[i]
-  }, ...c.slice(i + 1)]);
-  const print = () => {
-    const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
-    let html;
-    if (template === "a4") {
-      const CW = 420,
-        CH = 594,
-        sideW = 92,
-        badgeH = 100;
-      const a4PriceSVG = card => {
-        if (card.priceMode === "multibuy") {
-          const tiers = (card.tiers || []).filter(t => t && t.trim());
-          const n = tiers.length || 1;
-          const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
-          const availW = CW - 18 - sideW - 20;
-          const capFs = Math.floor(availW / (maxTierLen * 0.55));
-          const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
-          const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
-          const ys = [];
-          let acc = 0;
-          tiers.forEach((_, i) => {
-            const fs = i === n - 1 ? lastFs : smallFs;
-            ys.push(acc + fs * 0.78);
-            acc += fs * 1.25;
-          });
-          const startY = 494 - 14 - acc;
-          const nowRef = card.nowPrice ? '<text x="' + (CW - 18) + '" y="' + (startY - 18) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="30">' + card.nowPrice + '</text>' : '';
-          return nowRef + tiers.map((tier, i) => {
-            const fs = i === n - 1 ? lastFs : smallFs;
-            const each = parseTierEach(tier);
-            return '<text x="' + (CW - 18) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 18) + '" y="' + (startY + ys[i] + Math.round(lastFs * 0.28) + 18) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="17">' + each + '</text>' : '');
-          }).join("");
-        }
-        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW - 18) + '" y="348" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : "";
-        const nowLine = '<text x="' + (CW - 18) + '" y="443" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="88" letter-spacing="-1">' + card.nowPrice + '</text>';
-        const unitLine = card.unitPrice ? '<text x="' + (CW - 18) + '" y="466" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-size="17">' + card.unitPrice + '</text>' : "";
-        return wasLine + nowLine + unitLine;
-      };
-      const cardSVGs = cards.map(card => {
-        const badge = "SPECIAL OFFER";
-        const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-        const nameLen = (card.productName || "").length;
-        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
-        const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
-        const sizeText = card.size ? '<text x="' + (sideW + 18) + '" y="' + sizeY + '" fill="#000" font-family="Arial,Helvetica,sans-serif" font-size="17">' + card.size + '</text>' : "";
-        return '<div class="card">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="black"/>' + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideW + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CW / 2 + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + (card.validUntil ? '<text x="' + (sideW + 18) + '" y="488" text-anchor="start" fill="#000" font-family="Arial,Helvetica,sans-serif" font-size="9">Valid until ' + card.validUntil + '</text>' : '') + '</svg></div>';
-      }).join("");
-      html = cardSVGs;
-    } else {
-      // 8×4: 3 cards per A4 sheet with cut guides
-      const CW = 420,
-        CH = 148,
-        sideW = 64; // ~74mm × 2 = 148; 4 per A4
-      const cardsPerSheet = 4;
-      const printCards8 = batch8x4.length ? batch8x4 : [cards8x4];
-      const CARD_W = 304; // 152mm × 2 SVG units/mm
-      const xStart = CW - CARD_W; // = 116 SVG units left margin
-
-      const cardGroup = (card, yOffset) => {
-        if (!card) return `<rect x="${xStart}" y="${yOffset}" width="${CARD_W}" height="${CH}" fill="white"/>`;
-        const badge = "SPECIAL OFFER";
-        const badgeWords = badge.split(" ");
-        const longestWord = Math.max(...badgeWords.map(w => w.length));
-        const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (longestWord * 0.62))));
-        const logoBotR = Math.round(800 * sideW / 607.7);
-        const scaleX = (sideW / 607.7).toFixed(5);
-        return `
-          <rect x="${xStart}" y="${yOffset}" width="${CARD_W}" height="${CH}" fill="white"/>
-          <rect x="${xStart}" y="${yOffset}" width="${sideW}" height="${logoBotR}" fill="#000000"/>
-          <rect x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}" fill="#CC2222"/>
-          <g transform="translate(${xStart},${yOffset}) scale(${scaleX})"><path d="${logoPath}" fill="#FEDE00"/></g>
-          <foreignObject x="${xStart}" y="${yOffset + logoBotR}" width="${sideW}" height="${CH - logoBotR}">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:'Arial,Helvetica,sans-serif',sans-serif;font-weight:700;font-size:${badgeFontSize}px;color:#FEDE00;line-height:1.2;text-transform:uppercase;letter-spacing:0.04em;text-align:center;word-break:break-word;overflow:hidden">${badge}</div>
-          </foreignObject>
-          <foreignObject x="${xStart + sideW + 12}" y="${yOffset + 5}" width="${CARD_W - sideW - 20}" height="56">
-            <div xmlns="http://www.w3.org/1999/xhtml">
-              <div style="font-family:'Arial,Helvetica,sans-serif',sans-serif;font-weight:500;font-size:17px;line-height:1.2;color:#000;letter-spacing:-0.01em">${card.productName}</div>
-              ${card.size ? `<div style="font-family:'Arial,Helvetica,sans-serif',sans-serif;font-weight:400;font-size:10px;color:#000;margin-top:2px">${card.size}</div>` : ""}
-            </div>
-          </foreignObject>
-          ${(() => {
-          if (card.priceMode === "multibuy") {
-            const tiers = (card.tiers || []).filter(t => t && t.trim());
-            const n = tiers.length || 1;
-            const lastFs = n === 1 ? 40 : n === 2 ? 34 : n === 3 ? 26 : 20;
-            const smallFs = n === 1 ? 40 : n === 2 ? 20 : n === 3 ? 15 : 12;
-            const ys = [];
-            let acc = 0;
-            tiers.forEach((_, i) => {
-              const fs = i === n - 1 ? lastFs : smallFs;
-              ys.push(acc + fs * 0.78);
-              acc += fs * 1.3;
-            });
-            const startY = yOffset + 130 - acc;
-            const nowRef = card.nowPrice ? '<text x="' + (CW - 14) + '" y="' + (startY - 12) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="11">' + card.nowPrice + '</text>' : '';
-            return nowRef + tiers.map((tier, i) => {
-              const fs = i === n - 1 ? lastFs : smallFs;
-              const each = parseTierEach(tier);
-              return '<text x="' + (CW - 14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW - 14) + '" y="' + (startY + ys[i] + Math.round(fs * 0.42)) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="10">' + each + '</text>' : '');
-            }).join("");
-          }
-          const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<foreignObject x="' + (xStart + sideW + 12) + '" y="' + (yOffset + 64) + '" width="' + (CARD_W - sideW - 20) + '" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:\'Arial,Helvetica,sans-serif\',sans-serif;font-weight:400;font-size:20px;color:#000;text-decoration:line-through;text-align:right;line-height:1.1">' + card.wasPrice + '</div></foreignObject>' : '';
-          const nowLine = '<text x="' + (CW - 14) + '" y="' + (yOffset + 116) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="40" letter-spacing="-1">' + card.nowPrice + '</text>';
-          const unitLine = card.unitPrice ? '<text x="' + (CW - 14) + '" y="' + (yOffset + 130) + '" text-anchor="end" fill="#000" font-family="Arial,Helvetica,sans-serif" font-size="10">' + card.unitPrice + '</text>' : '';
-          return wasLine + nowLine + unitLine;
-        })()}`;
-      };
-
-      // 152×74mm cards, right-aligned — one SVG per sheet
-      const sheetSVG = sheetCards => `<svg viewBox="0 0 ${CW} ${CH * 4}" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100vw;height:auto">
-        <rect x="0" y="0" width="${xStart}" height="${CH * 4}" fill="white"/>
-        <line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH * 4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>
-        ${sheetCards.map((card, ci) => `
-          ${cardGroup(card, ci * CH)}
-          ${ci < 3 ? `<line x1="${xStart}" y1="${(ci + 1) * CH}" x2="${CW}" y2="${(ci + 1) * CH}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : ""}
-        `).join("")}
-      </svg>`;
-      const sheetHTML = printCards8.map((sheet, si) => `<div class="sheet">${sheetSVG(sheet)}</div>`).join("");
-      html = sheetHTML;
-    }
-    const _loadHtml2pdf = () => new Promise(res => {
-      if (window.html2pdf) return res();
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      s.onload = res;
-      document.head.appendChild(s);
-    });
-    const _pdfEl = document.createElement('div');
-    _pdfEl.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:white;';
-    _pdfEl.innerHTML = '<style>.card,.sheet{page-break-after:always;page-break-inside:avoid}.card:last-child,.sheet:last-child{page-break-after:auto}.card svg{display:block;width:210mm;height:297mm}.sheet svg{display:block;width:210mm;height:auto}</style>' + html;
-    document.body.appendChild(_pdfEl);
-    const _fname = template === 'a4' ? 'megamarket-price-cards.pdf' : 'megamarket-shelf-labels.pdf';
-    showToast("Generating PDF…");
-    _loadHtml2pdf().then(() => {
-      html2pdf().set({
-        margin: 0,
-        filename: _fname,
-        image: {
-          type: 'png',
-          quality: 1
-        },
-        html2canvas: {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait'
-        },
-        pagebreak: {
-          mode: ['css'],
-          before: '.card, .sheet'
-        }
-      }).from(_pdfEl).save().then(() => {
-        try {
-          document.body.removeChild(_pdfEl);
-        } catch (e) {}
-        showToast("PDF downloaded ✓");
-        clearCurrent();
-      });
-    });
-  };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `
 
         *{box-sizing:border-box}
@@ -1573,14 +973,9 @@ function App() {
         .main-row{display:flex;flex:1;overflow:hidden}
         .form-pane{width:310px;flex-shrink:0;background:#fff;border-right:1px solid #e0e0e0;overflow-y:auto;padding:20px 16px}
         .preview-pane{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#e0e0e0;overflow:hidden;padding:24px;gap:12px;min-width:0}
-        .mob-toggle{display:none}
-        .landing-card{background:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s;border:3px solid transparent}
-        .landing-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.18)}
-        .landing-card.selected{border-color:#FEDE00}
         @media(max-width:640px){
           /* Header */
           .hide-mob{display:none!important}
-          .mob-toggle{display:flex}
           /* Layout */
           .main-row{flex-direction:column;overflow-y:auto}
           .form-pane{width:100%!important;border-right:none;border-bottom:1px solid #e0e0e0;overflow-y:visible;padding:14px 12px;flex-shrink:0}
@@ -1610,354 +1005,11 @@ function App() {
       boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       whiteSpace: "nowrap"
     }
-  }, toast), !landingDone && /*#__PURE__*/React.createElement("div", {
+  }, toast), /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
       display: "flex",
-      flexDirection: "column",
-      background: "#f0f0f0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: K,
-      padding: "28px 40px",
-      display: "flex",
-      alignItems: "center",
-      gap: 16
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "28",
-    height: "37",
-    viewBox: "0 0 607.7 800",
-    xmlns: "http://www.w3.org/2000/svg"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
-    fill: "#FEDE00"
-  })), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontWeight: 700,
-      fontSize: 20,
-      letterSpacing: 3,
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "PRINTSHOP")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "40px 24px"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 24,
-      flexWrap: "wrap",
-      justifyContent: "center",
-      width: "100%",
-      maxWidth: 820
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "landing-card",
-    onClick: () => {
-      setTemplate("a4");
-      setLandingDone(true);
-    },
-    style: {
-      flex: "1 1 340px",
-      maxWidth: 380,
-      background: W,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.10)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#eaeaea",
-      padding: "20px 24px 0",
-      display: "flex",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 420 594",
-    width: "120",
-    height: "170",
-    xmlns: "http://www.w3.org/2000/svg",
-    style: {
-      display: "block",
-      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.18))"
-    }
-  }, /*#__PURE__*/React.createElement("rect", {
-    width: "420",
-    height: "594",
-    fill: "white"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "0",
-    y: "0",
-    width: "92",
-    height: "594",
-    fill: "#000"
-  }), /*#__PURE__*/React.createElement("g", {
-    transform: "scale(0.1515)"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
-    fill: "#FEDE00"
-  })), /*#__PURE__*/React.createElement("rect", {
-    x: "110",
-    y: "20",
-    width: "220",
-    height: "12",
-    rx: "2",
-    fill: "#ddd"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "110",
-    y: "38",
-    width: "160",
-    height: "8",
-    rx: "2",
-    fill: "#eee"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "270",
-    y: "390",
-    width: "130",
-    height: "56",
-    rx: "0",
-    fill: "#000"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "220",
-    y: "358",
-    width: "180",
-    height: "26",
-    rx: "2",
-    fill: "#eee"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "0",
-    y: "494",
-    width: "420",
-    height: "100",
-    fill: "#CC2222"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "100",
-    y: "520",
-    width: "220",
-    height: "14",
-    rx: "2",
-    fill: "#FEDE00",
-    opacity: "0.8"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "20px 24px 24px",
-      display: "flex",
-      flexDirection: "column",
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 900,
-      fontSize: 18,
-      letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif",
-      color: K,
-      marginBottom: 6
-    }
-  }, "PROMOTIONAL CARD"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: "#000",
-      fontFamily: "system-ui,sans-serif",
-      lineHeight: 1.65,
-      marginBottom: 16
-    }
-  }, "Full-page promotional price cards, printed one per A4 sheet. Large format, high-impact display for shelf or window."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      flexWrap: "wrap",
-      marginBottom: 20
-    }
-  }, ["Single Price", "Was / Now", "Multi-Buy", "Batch print"].map(t => /*#__PURE__*/React.createElement("span", {
-    key: t,
-    style: {
-      background: "#f0f0f0",
-      color: "#555",
-      fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: 0.8,
-      padding: "3px 8px",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase"
-    }
-  }, t))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: K,
-      color: W,
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 2,
-      padding: "11px 18px",
-      textAlign: "center",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      marginTop: "auto"
-    }
-  }, "Open Promotional Card \u2192"))), /*#__PURE__*/React.createElement("div", {
-    className: "landing-card",
-    onClick: () => {
-      setTemplate("8x4");
-      setLandingDone(true);
-    },
-    style: {
-      flex: "1 1 340px",
-      maxWidth: 380,
-      background: W,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.10)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#eaeaea",
-      padding: "20px 24px 0",
-      display: "flex",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 420 592",
-    width: "120",
-    height: "170",
-    xmlns: "http://www.w3.org/2000/svg",
-    style: {
-      display: "block",
-      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.18))"
-    }
-  }, /*#__PURE__*/React.createElement("rect", {
-    width: "420",
-    height: "592",
-    fill: "#f0f0f0"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "116",
-    width: "304",
-    height: "592",
-    fill: "white"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "116",
-    y1: "0",
-    x2: "116",
-    y2: "592",
-    stroke: "#bbb",
-    strokeWidth: "1",
-    strokeDasharray: "6,4"
-  }), [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("g", {
-    key: i,
-    transform: `translate(0,${i * 148})`
-  }, /*#__PURE__*/React.createElement("rect", {
-    x: "116",
-    y: "0",
-    width: "64",
-    height: "84",
-    fill: "#000"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "116",
-    y: "84",
-    width: "64",
-    height: "64",
-    fill: "#CC2222"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "192",
-    y: "8",
-    width: "180",
-    height: "10",
-    rx: "1",
-    fill: "#ddd"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "192",
-    y: "22",
-    width: "120",
-    height: "7",
-    rx: "1",
-    fill: "#eee"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "310",
-    y: "80",
-    width: "100",
-    height: "28",
-    rx: "0",
-    fill: "#000"
-  }), i < 3 && /*#__PURE__*/React.createElement("line", {
-    x1: "116",
-    y1: "148",
-    x2: "420",
-    y2: "148",
-    stroke: "#bbb",
-    strokeWidth: "0.5",
-    strokeDasharray: "4,3"
-  }))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "20px 24px 24px",
-      display: "flex",
-      flexDirection: "column",
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 900,
-      fontSize: 18,
-      letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif",
-      color: K,
-      marginBottom: 6
-    }
-  }, "SHELF TALKER"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: "#000",
-      fontFamily: "system-ui,sans-serif",
-      lineHeight: 1.65,
-      marginBottom: 16
-    }
-  }, "4 shelf talkers per A4 sheet. 152\xD774mm each, right-aligned with a perforation cut line."), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      flexWrap: "wrap",
-      marginBottom: 20
-    }
-  }, ["Single Price", "Was / Now", "Multi-Buy", "4 per sheet"].map(t => /*#__PURE__*/React.createElement("span", {
-    key: t,
-    style: {
-      background: "#f0f0f0",
-      color: "#555",
-      fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: 0.8,
-      padding: "3px 8px",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase"
-    }
-  }, t))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: K,
-      color: W,
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 2,
-      padding: "11px 18px",
-      textAlign: "center",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      marginTop: "auto"
-    }
-  }, "Open Shelf Talker \u2192")))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      ...(landingDone ? {} : {
-        display: "none"
-      })
+      flexDirection: "column"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2004,7 +1056,7 @@ function App() {
       alignItems: "center",
       gap: 6
     }
-  }, hasUnsaved && view === "editor" && /*#__PURE__*/React.createElement("span", {
+  }, hasUnsaved && /*#__PURE__*/React.createElement("span", {
     style: {
       width: 7,
       height: 7,
@@ -2013,33 +1065,7 @@ function App() {
       display: "inline-block",
       flexShrink: 0
     }
-  }), canUndo && /*#__PURE__*/React.createElement("button", {
-    onClick: undo,
-    title: "Undo",
-    style: {
-      background: "rgba(255,255,255,0.12)",
-      color: W,
-      border: "none",
-      padding: "8px 8px",
-      fontWeight: 800,
-      fontSize: 13,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "\u21A9"), canRedo && /*#__PURE__*/React.createElement("button", {
-    onClick: redo,
-    title: "Redo",
-    style: {
-      background: "rgba(255,255,255,0.12)",
-      color: W,
-      border: "none",
-      padding: "8px 8px",
-      fontWeight: 800,
-      fontSize: 13,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "\u21AA"), (view === "editor" || showQueue) && /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: () => exportPDF(template, queue),
     style: {
       background: Y,
@@ -2053,7 +1079,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "\u2399 Export"))), /*#__PURE__*/React.createElement("button", { onClick: () => exportBlank(), style: { background: "rgba(255,255,255,0.12)", color: W, border: "none", padding: "8px 12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" } }, "Blank"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Export"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       borderTop: "1px solid rgba(255,255,255,0.1)",
@@ -2061,7 +1087,7 @@ function App() {
       overflowX: "auto"
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => { setTemplate("a4"); setShowQueue(false); setView("editor"); },
+    onClick: () => { setTemplate("a4"); setShowQueue(false); },
     style: {
       background: "none",
       color: template === "a4" && !showQueue ? W : "rgba(255,255,255,0.5)",
@@ -2077,7 +1103,7 @@ function App() {
       whiteSpace: "nowrap"
     }
   }, "Promo A4"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => { setTemplate("8x4"); setShowQueue(false); setView("editor"); },
+    onClick: () => { setTemplate("8x4"); setShowQueue(false); },
     style: {
       background: "none",
       color: template === "8x4" && !showQueue ? W : "rgba(255,255,255,0.5)",
@@ -2370,177 +1396,17 @@ function App() {
       flexShrink: 0,
       lineHeight: 1
     }
-  }, "\u2715"))))), showDrafts && /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      padding: 24,
-      background: "#f0f0f0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 20
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 900,
-      fontSize: 16,
-      letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif",
-      color: K
-    }
-  }, "DRAFTS"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: K,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 2
-    }
-  }, "Up to 5 saved \u2014 oldest removed automatically")), /*#__PURE__*/React.createElement("button", {
-    onClick: saveDraft,
-    style: {
-      background: K,
-      color: W,
-      border: "none",
-      padding: "10px 16px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "+ Save Current")), drafts.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "40vh",
-      color: K
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 36
-    }
-  }, "\uD83D\uDCDD"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      letterSpacing: 2,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 8
-    }
-  }, "NO DRAFTS YET"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 4
-    }
-  }, "Click \"+ Save Current\" to save your work in progress")) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 8
-    }
-  }, drafts.map(draft => /*#__PURE__*/React.createElement("div", {
-    key: draft.id,
-    style: {
-      background: W,
-      padding: "14px 16px",
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 4,
-      alignSelf: "stretch",
-      background: draft.template === "a4" ? K : R,
-      borderRadius: 2,
-      flexShrink: 0
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 13,
-      fontFamily: "system-ui,sans-serif",
-      color: K,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, draft.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: K,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 2
-    }
-  }, draft.template === "a4" ? "Promotional Card" : "Shelf Talker", " \xB7 ", draft.savedAt)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => loadDraft(draft),
-    style: {
-      background: K,
-      color: W,
-      border: "none",
-      padding: "6px 12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      flexShrink: 0
-    }
-  }, "Load"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => deleteDraft(draft.id),
-    style: {
-      background: "none",
-      color: "#c00",
-      border: "none",
-      fontWeight: 700,
-      fontSize: 14,
-      cursor: "pointer",
-      flexShrink: 0,
-      padding: "0 4px"
-    }
   }, "\u2715"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: showQueue ? "none" : "flex",
       flex: 1,
       overflow: "hidden"
     }
-  }, template === "a4" && tab === "editor" && /*#__PURE__*/React.createElement("div", {
+  }, template === "a4" && /*#__PURE__*/React.createElement("div", {
     className: "main-row"
   }, /*#__PURE__*/React.createElement("div", {
     className: "form-pane"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "mob-toggle",
-    onClick: () => setShowPreview(p => !p),
-    style: {
-      width: "100%",
-      background: K,
-      color: W,
-      border: "none",
-      padding: "10px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      marginBottom: 14,
-      display: "none"
-    }
-  }, showPreview ? "Hide Preview ↑" : "Show Preview ↓"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       height: 3,
       background: Y,
@@ -2767,137 +1633,7 @@ function App() {
       color: "#bbb",
       letterSpacing: 1
     }
-  }, template === "a4" ? "Promotional Card · 210×297mm" : "152×74mm · 4 per A4 sheet"))), template === "a4" && tab === "batch" && /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      padding: "16px"
-    }
-  }, cards.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "60vh",
-      color: "#bbb"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 42
-    }
-  }, "\uD83C\uDFF7\uFE0F"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      letterSpacing: 3,
-      fontFamily: "system-ui, sans-serif",
-      marginTop: 8
-    }
-  }, "NO CARDS YET"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTab("editor"),
-    style: {
-      marginTop: 16,
-      background: K,
-      color: W,
-      border: "none",
-      padding: "10px 24px",
-      fontWeight: 800,
-      fontSize: 12,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui, sans-serif"
-    }
-  }, "+ New Card")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 20
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      letterSpacing: 2,
-      color: "#000",
-      textTransform: "uppercase",
-      fontFamily: "system-ui, sans-serif"
-    }
-  }, cards.length, " card", cards.length !== 1 ? "s" : "", " in batch"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setTab("editor"),
-    style: {
-      background: K,
-      color: W,
-      border: "none",
-      padding: "8px 18px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui, sans-serif"
-    }
-  }, "+ Add Card")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 20
-    }
-  }, cards.map((card, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 6
-    }
-  }, template === "a4" ? /*#__PURE__*/React.createElement(PriceCard, {
-    card: card,
-    scale: 0.38
-  }) : /*#__PURE__*/React.createElement(PriceCard8x4, {
-    card: card,
-    scale: 0.65
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 4,
-      width: template === "a4" ? 420 * 0.38 : 420 * 0.65
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => startEdit(i),
-    style: {
-      flex: 1,
-      background: K,
-      color: W
-    }
-  }, "Edit"), /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => dupe(i),
-    style: {
-      flex: 1,
-      background: Y,
-      color: K
-    }
-  }, "Dupe"), /*#__PURE__*/React.createElement("button", {
-    className: "ab",
-    onClick: () => del(i),
-    style: {
-      flex: 1,
-      background: "#c0392b",
-      color: W
-    }
-  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: "#000",
-      maxWidth: 420 * 0.4,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    }
-  }, card.productName)))))), template === "8x4" && /*#__PURE__*/React.createElement("div", {
+  }, template === "a4" ? "Promotional Card · 210×297mm" : "152×74mm · 4 per A4 sheet"))), template === "8x4" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
