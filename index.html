@@ -1307,197 +1307,114 @@ function App() {
     });
   };
   const exportPDF = async () => {
-    if (!window.jspdf) { alert("PDF library not loaded yet"); return; }
-    const { jsPDF } = window.jspdf;
-
-    // Always read from ref — guaranteed current
+    const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
+    const fontStyle = window._getFontCSS ? window._getFontCSS() : "";
     const liveQueue = queueRef.current || [];
-    const isA4 = template === "a4";
-    // DEBUG: confirm what's happening
-    showToast("Exporting... template=" + template + " queue=" + liveQueue.length);
 
-    if (isA4) {
-      // ── A4 export ────────────────────────────────────────────
-      const items = (() => {
-        const ready = liveQueue.filter(q => q.type==="a4" && q.status==="ready").map(q=>q.data);
+    if (template === "a4") {
+      const CW = 420, CH = 594, sideW = 92, badgeH = 100;
+      const badge = "SPECIAL OFFER";
+      const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
+
+      const getItems = () => {
+        const ready = liveQueue.filter(q => q.type === "a4" && q.status === "ready").map(q => q.data);
         if (ready.length) return ready;
-        const all = liveQueue.filter(q => q.type==="a4").map(q=>q.data);
+        const all = liveQueue.filter(q => q.type === "a4").map(q => q.data);
         if (all.length) return all;
         if (form.productName || form.nowPrice) return [form];
         return [];
-      })().filter(c => c && (c.productName || c.nowPrice));
-
-      if (!items.length) { showToast("Add a card to the queue first"); return; }
-
-      const W=210, H=297;
-      const SW=46;   // sidebar mm  (92/420*210)
-      const BH=50;   // badge mm    (100/594*297)
-      const ml=SW+6; // left margin for content
-      const mr=202;  // right margin
-
-      // Render logo (just a path — no fonts — works fine in canvas)
-      const logoDataUrl = await new Promise(resolve => {
-        const sz=200;
-        const cv=document.createElement("canvas"); cv.width=sz; cv.height=sz;
-        const cx=cv.getContext("2d");
-        cx.fillStyle="#000"; cx.fillRect(0,0,sz,sz);
-        const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 607.7 800" width="${sz}" height="${sz}"><path d="M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z" fill="#FEDE00"/></svg>`;
-        const blob=new Blob([svgStr],{type:"image/svg+xml"});
-        const url=URL.createObjectURL(blob);
-        const img=new Image();
-        img.onload=()=>{ cx.drawImage(img,0,0,sz,sz); URL.revokeObjectURL(url); resolve(cv.toDataURL("image/png")); };
-        img.onerror=()=>resolve(null);
-        img.src=url;
-      });
-
-      // Register MadaniArabic font with jsPDF from embedded CSS
-      const getMadaniB64 = (weight) => {
-        try {
-          for (const sheet of document.styleSheets) {
-            for (const rule of sheet.cssRules) {
-              if (rule.type === CSSRule.FONT_FACE_RULE) {
-                if (String(rule.style.getPropertyValue("font-weight")).trim() === String(weight)) {
-                  const src = rule.style.getPropertyValue("src");
-                  const m = src.match(/url\(["']?data:[^;]+;base64,([^"')]+)/);
-                  if (m) return m[1].replace(/\s/g,"");
-                }
-              }
-            }
-          }
-        } catch(e) {}
-        return null;
       };
-      const pdf = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
-      let FONT = "helvetica";
-      try {
-        const b64normal = getMadaniB64(400);
-        const b64bold   = getMadaniB64(700);
-        if (b64normal) { pdf.addFileToVFS("MadaniArabic-n.otf", b64normal); pdf.addFont("MadaniArabic-n.otf","MadaniArabic","normal"); }
-        if (b64bold)   { pdf.addFileToVFS("MadaniArabic-b.otf", b64bold);   pdf.addFont("MadaniArabic-b.otf","MadaniArabic","bold"); }
-        if (b64normal||b64bold) FONT = "MadaniArabic";
-      } catch(fontErr) { console.warn("Font reg failed, using Helvetica:", fontErr); FONT = "helvetica"; }
+      const items = getItems().filter(c => c && (c.productName || c.nowPrice));
+      if (!items.length) { showToast("Nothing to export — fill in the form or add to queue"); return; }
 
-      items.forEach((card, idx) => {
-        if (idx>0) pdf.addPage("a4","portrait");
-
-        // Black sidebar
-        pdf.setFillColor(0,0,0);
-        pdf.rect(0,0,SW,H,"F");
-
-        // Logo image
-        if (logoDataUrl) pdf.addImage(logoDataUrl,"PNG",1,1,SW-2,SW-2);
-
-        // Red badge
-        pdf.setFillColor(204,34,34);
-        pdf.rect(0,H-BH,W,BH,"F");
-
-        // SPECIAL OFFER
-        pdf.setFont(FONT,"bold");
-        pdf.setFontSize(20);
-        pdf.setTextColor(254,222,0);
-        pdf.text("SPECIAL OFFER",W/2,H-BH+BH*0.65,{align:"center"});
-
-        // Product name
-        const nameStr = card.productName || "";
-        const namePt = nameStr.length>40?14:nameStr.length>26?16:nameStr.length>16?18:22;
-        pdf.setFont(FONT,"bold");
-        pdf.setFontSize(namePt);
-        pdf.setTextColor(0,0,0);
-        const nameLines = pdf.splitTextToSize(nameStr, W-ml-8);
-        pdf.text(nameLines, ml, 14);
-
-        // Size
-        let yAfter = 14 + nameLines.length*(namePt*0.352778+1);
-        if (card.size) {
-          pdf.setFont(FONT,"normal"); pdf.setFontSize(11); pdf.setTextColor(0,0,0);
-          pdf.text(card.size, ml, yAfter+5);
+      const priceSVG = card => {
+        if (card.priceMode === "multibuy") {
+          const tiers = (card.tiers || []).filter(t => t && t.trim());
+          const n = tiers.length || 1;
+          const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
+          const availW = CW - 18 - sideW - 20;
+          const capFs = Math.floor(availW / (maxTierLen * 0.55));
+          const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
+          const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
+          const ys = []; let acc = 0;
+          tiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs*0.78); acc += fs*1.25; });
+          const startY = 494 - 14 - acc;
+          const nowRef = card.nowPrice ? '<text x="' + (CW-18) + '" y="' + (startY-18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30">' + card.nowPrice + '</text>' : '';
+          return nowRef + tiers.map((tier, i) => {
+            const fs = i === n-1 ? lastFs : smallFs;
+            const each = parseTierEach(tier);
+            return '<text x="' + (CW-18) + '" y="' + (startY+ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW-18) + '" y="' + (startY+ys[i]+Math.round(lastFs*0.28)+18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + each + '</text>' : '');
+          }).join('');
         }
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+        const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+        const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
+        return wasLine + nowLine + unitLine;
+      };
 
-        // Prices
-        pdf.setTextColor(0,0,0);
-        if (card.priceMode==="multibuy") {
-          const tiers=(card.tiers||[]).filter(t=>t&&t.trim());
-          const n=tiers.length||1;
-          const tierPt=Math.min(46,Math.max(12,Math.floor(46/n)));
-          if (card.nowPrice) {
-            pdf.setFont(FONT,"normal"); pdf.setFontSize(13);
-            pdf.text(card.nowPrice,mr,110,{align:"right"});
-          }
-          const tierH=tierPt*0.352778+3;
-          const startY=160-(n*tierH)/2+tierH;
-          tiers.forEach((tier,i)=>{
-            const fs=i===n-1?tierPt:Math.round(tierPt*0.72);
-            pdf.setFont(FONT,"bold"); pdf.setFontSize(fs);
-            pdf.text(tier,mr,startY+i*(fs*0.352778+3),{align:"right"});
-          });
-          if (card.unitPrice) {
-            pdf.setFont(FONT,"normal"); pdf.setFontSize(10);
-            pdf.text(card.unitPrice,mr,startY+n*(tierPt*0.352778+4),{align:"right"});
-          }
-        } else {
-          if (card.wasPrice && card.priceMode==="wasnow") {
-            pdf.setFont(FONT,"normal"); pdf.setFontSize(20);
-            const ww=pdf.getTextWidth(card.wasPrice);
-            pdf.text(card.wasPrice,mr,128,{align:"right"});
-            const ly=128-20*0.352778*0.35;
-            pdf.setDrawColor(0); pdf.setLineWidth(0.5); pdf.line(mr-ww,ly,mr,ly);
-          }
-          pdf.setFont(FONT,"bold"); pdf.setFontSize(58);
-          pdf.text(card.nowPrice||"",mr,164,{align:"right"});
-          if (card.unitPrice) {
-            pdf.setFont(FONT,"normal"); pdf.setFontSize(11);
-            pdf.text(card.unitPrice,mr,176,{align:"right"});
-          }
-        }
-
-        // Valid until
-        if (card.validUntil) {
-          pdf.setFont(FONT,"normal"); pdf.setFontSize(9); pdf.setTextColor(0,0,0);
-          pdf.text("Valid until "+card.validUntil, ml, H-BH-4);
-        }
+      const pages = items.map(card => {
+        const nameLen = (card.productName || "").length;
+        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
+        const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+        const sizeText = card.size ? '<text x="' + (sideW+18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : '';
+        const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
+          '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="#000"/>' +
+          '<g transform="scale(' + (sideW/607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' +
+          '<text x="' + (sideW+18) + '" y="' + (14+nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + (card.productName || '') + '</text>' +
+          sizeText + priceSVG(card) +
+          '<rect x="0" y="' + (CH-badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' +
+          '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' +
+          (card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '') +
+          '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
       });
 
       saveToLibrary();
-      pdf.save("megamarket-a4-"+Date.now()+".pdf");
-      setQueue(q=>q.filter(i=>!(i.type==="a4"&&i.status==="ready")));
+      await downloadPDF(pages, "megamarket-a4-" + Date.now() + ".pdf");
+      setQueue(q => q.filter(i => !(i.type === "a4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
 
     } else {
-      // ── 8x4 Shelf Talker export (keep existing SVG-canvas approach) ──
-      const ready8x4 = liveQueue.filter(q=>q.type==="8x4"&&q.status==="ready").map(q=>q.data);
+      // ── 8x4 Shelf Talker export ──
+      const ready8x4 = liveQueue.filter(q => q.type === "8x4" && q.status === "ready").map(q => q.data);
       const sheets = ready8x4.length ? ready8x4 : [cards8x4];
-      const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
-      const CW=420,CH=148,sideW=64,CARD_W=304,xStart=CW-CARD_W;
-      const FONT="Arial,Helvetica,sans-serif";
+      const CW = 420, CH = 148, sideW = 64, CARD_W = 304, xStart = CW - CARD_W;
       const pages = sheets.map(sheet => {
-        const svgRows = sheet.map((card,ci) => {
-          const badge="SPECIAL OFFER";
-          const badgeFontSize=Math.max(7,Math.min(11,Math.floor(56/(Math.max(...badge.split(" ").map(w=>w.length))*0.62))));
-          const logoBotR=Math.round(800*sideW/607.7);
-          const scaleX=(sideW/607.7).toFixed(5);
-          const yo=ci*CH;
-          const nameFontSize=Math.max(10,Math.min(17,Math.floor(236/Math.max((card.productName||"").length,1)*0.9)));
-          const wasLine=card.wasPrice&&card.priceMode==="wasnow"?`<text x="${CW-14}" y="${yo+80}" text-anchor="end" fill="#000" font-family="${FONT}" font-size="20" text-decoration="line-through">${card.wasPrice}</text>`:"";
-          const nowLine=`<text x="${CW-14}" y="${yo+116}" text-anchor="end" fill="#000" font-family="${FONT}" font-weight="700" font-size="34">${card.nowPrice||""}</text>`;
-          const unitLine=card.unitPrice?`<text x="${CW-14}" y="${yo+130}" text-anchor="end" fill="#000" font-family="${FONT}" font-size="11">${card.unitPrice}</text>`:"";
-          const validLine=card.validUntil?`<text x="${xStart+sideW+12}" y="${yo+142}" text-anchor="start" fill="#000" font-family="${FONT}" font-size="7">Valid until ${card.validUntil}</text>`:"";
-          return `<rect x="${xStart}" y="${yo}" width="${CARD_W}" height="${CH}" fill="white"/>` +
-            `<rect x="${xStart}" y="${yo}" width="${sideW}" height="${logoBotR}" fill="#000"/>` +
-            `<rect x="${xStart}" y="${yo+logoBotR}" width="${sideW}" height="${CH-logoBotR}" fill="#CC2222"/>` +
-            `<g transform="translate(${xStart},${yo}) scale(${scaleX})"><path d="${logoPath}" fill="#FEDE00"/></g>` +
-            `<text x="${xStart+sideW/2}" y="${yo+logoBotR+(CH-logoBotR)*0.46}" text-anchor="middle" fill="#FEDE00" font-family="${FONT}" font-weight="700" font-size="${badgeFontSize}">SPECIAL</text>` +
-            `<text x="${xStart+sideW/2}" y="${yo+logoBotR+(CH-logoBotR)*0.67}" text-anchor="middle" fill="#FEDE00" font-family="${FONT}" font-weight="700" font-size="${badgeFontSize}">OFFER</text>` +
-            `<text x="${xStart+sideW+10}" y="${yo+nameFontSize+4}" fill="#000" font-family="${FONT}" font-weight="700" font-size="${nameFontSize}">${card.productName||""}</text>` +
-            (card.size?`<text x="${xStart+sideW+10}" y="${yo+nameFontSize+18}" fill="#000" font-family="${FONT}" font-size="11">${card.size}</text>`:"") +
-            wasLine+nowLine+unitLine+validLine +
-            (ci<3?`<line x1="${xStart}" y1="${yo+CH}" x2="${CW}" y2="${yo+CH}" stroke="#ddd" stroke-width="0.5"/>`:"");
-        }).join("");
-        const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" width="${CW}" height="${CH*4}" viewBox="0 0 ${CW} ${CH*4}"><rect width="${xStart}" height="${CH*4}" fill="white"/><line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH*4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>${svgRows}</svg>`;
-        return { svgString:svgStr, widthMm:210, heightMm:297 };
+        const svgRows = sheet.map((card, ci) => {
+          const badge = "SPECIAL OFFER";
+          const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (Math.max(...badge.split(" ").map(w => w.length)) * 0.62))));
+          const logoBotR = Math.round(800 * sideW / 607.7);
+          const scaleX = (sideW / 607.7).toFixed(5);
+          const yo = ci * CH;
+          const nameLen = (card.productName || "").length;
+          const nameFontSize = Math.max(10, Math.min(17, nameLen > 30 ? 10 : nameLen > 20 ? 12 : nameLen > 10 ? 14 : 17));
+          const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+          const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+          const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+          const validLine = card.validUntil ? '<text x="' + (xStart+sideW+12) + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '';
+          return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' +
+            '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' +
+            '<rect x="' + xStart + '" y="' + (yo+logoBotR) + '" width="' + sideW + '" height="' + (CH-logoBotR) + '" fill="#CC2222"/>' +
+            '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' +
+            '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.46) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">SPECIAL</text>' +
+            '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>' +
+            '<text x="' + (xStart+sideW+10) + '" y="' + (yo+nameFontSize+4) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '">' + (card.productName || '') + '</text>' +
+            (card.size ? '<text x="' + (xStart+sideW+10) + '" y="' + (yo+nameFontSize+18) + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') +
+            wasLine + nowLine + unitLine + validLine +
+            (ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ddd" stroke-width="0.5"/>' : '');
+        }).join('');
+        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + xStart + '" height="' + (CH*4) + '" fill="white"/>' +
+          '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + (CH*4) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
+          svgRows + '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
       });
       saveToLibrary();
-      await downloadPDF(pages,"megamarket-8x4-"+Date.now()+".pdf");
-      setQueue(q=>q.filter(i=>!(i.type==="8x4"&&i.status==="ready")));
+      await downloadPDF(pages, "megamarket-8x4-" + Date.now() + ".pdf");
+      setQueue(q => q.filter(i => !(i.type === "8x4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
     }
   };
