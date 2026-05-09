@@ -1306,12 +1306,13 @@ function App() {
       });
     });
   };
-  const exportPDF = async () => {
+  const exportPDF = async (forceTemplate) => {
     const logoPath = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
     const fontStyle = window._getFontCSS ? window._getFontCSS() : "";
     const liveQueue = queueRef.current || [];
+    const activeTemplate = forceTemplate || template;
 
-    if (template === "a4") {
+    if (activeTemplate === "a4") {
       const CW = 420, CH = 594, sideW = 92, badgeH = 100;
       const badge = "SPECIAL OFFER";
       const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
@@ -1324,8 +1325,8 @@ function App() {
         if (form.productName || form.nowPrice) return [form];
         return [];
       };
-      const items = getItems().filter(c => c && (c.productName || c.nowPrice));
-      if (!items.length) { showToast("Nothing to export — fill in the form or add to queue"); return; }
+      const items = getItems().filter(Boolean);
+      if (!items.length) { showToast("Nothing to export — fill in a card or add to queue"); return; }
 
       const priceSVG = card => {
         if (card.priceMode === "multibuy") {
@@ -2291,8 +2292,8 @@ function App() {
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("a4"), 100);
     },
     style: {
       background: K,
@@ -2309,8 +2310,8 @@ function App() {
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("8x4"), 100);
     },
     style: {
       background: Y,
@@ -2549,8 +2550,8 @@ function App() {
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("a4"), 100);
     },
     style: {
       background: K,
@@ -2567,8 +2568,8 @@ function App() {
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("8x4"), 100);
     },
     style: {
       background: Y,
@@ -2807,8 +2808,8 @@ function App() {
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("a4"), 100);
     },
     style: {
       background: K,
@@ -2825,8 +2826,8 @@ function App() {
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("8x4"), 100);
     },
     style: {
       background: Y,
@@ -3065,8 +3066,8 @@ function App() {
   }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("a4"), 100);
     },
     style: {
       background: K,
@@ -3083,8 +3084,8 @@ function App() {
   }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("8x4"), 100);
     },
     style: {
       background: Y,
@@ -3351,8 +3352,8 @@ function App() {
   }, cards.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("a4"), 100);
     },
     style: {
       background: K,
@@ -3369,8 +3370,8 @@ function App() {
   }, "\u2399 Promo (", cards.length, ")"), batch8x4.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
-      setTimeout(() => exportPDF(), 50);
       setShowQueue(false);
+      setTimeout(() => exportPDF("8x4"), 100);
     },
     style: {
       background: Y,
