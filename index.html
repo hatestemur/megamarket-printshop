@@ -1055,13 +1055,11 @@ function App() {
           const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
           const validLine = card.validUntil ? '<text x="' + _8nX + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '';
           const sizeText8 = card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '';
-          const cutLine = ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ccc" stroke-width="0.5"/>' : '';
-          return nameTextSVG8 + sizeText8 + wasLine + nowLine + unitLine + validLine + cutLine;
+          return nameTextSVG8 + sizeText8 + wasLine + nowLine + unitLine + validLine;
         }).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + (CH*4) + '" fill="white"/>' +
-          '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + (CH*4) + '" stroke="#ccc" stroke-width="0.5" stroke-dasharray="6,4"/>' +
           svgRows + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
