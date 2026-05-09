@@ -2170,7 +2170,41 @@ function App() {
       padding: "0 8px",
       overflowX: "auto"
     }
-  }, queue.length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setTemplate("a4"); setShowQueue(false); setView("editor"); },
+    style: {
+      background: "none",
+      color: template === "a4" && !showQueue ? W : "rgba(255,255,255,0.5)",
+      border: "none",
+      borderBottom: template === "a4" && !showQueue ? `2px solid ${W}` : "2px solid transparent",
+      padding: "8px 12px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Promo A4"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setTemplate("8x4"); setShowQueue(false); setView("editor"); },
+    style: {
+      background: "none",
+      color: template === "8x4" && !showQueue ? W : "rgba(255,255,255,0.5)",
+      border: "none",
+      borderBottom: template === "8x4" && !showQueue ? `2px solid ${W}` : "2px solid transparent",
+      padding: "8px 12px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Shelf 8x4"), /*#__PURE__*/React.createElement("div", {
+    style: { flex: 1 }
+  }), queue.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowQueue(q => !q);
       if (view === "library") setView("editor");
@@ -2189,26 +2223,7 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, "\u2295 Queue (", queue.length, ")"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setView(view === "library" ? "editor" : "library");
-      setShowQueue(false);
-    },
-    style: {
-      background: "none",
-      color: view === "library" ? Y : "rgba(255,255,255,0.65)",
-      border: "none",
-      borderBottom: view === "library" ? `2px solid ${Y}` : "2px solid transparent",
-      padding: "8px 10px",
-      fontWeight: 800,
-      fontSize: 10,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui, sans-serif",
-      whiteSpace: "nowrap"
-    }
-  }, view === "library" ? "← Editor" : `Library${library.length ? ` (${library.length})` : ""}`))), showQueue && /*#__PURE__*/React.createElement("div", {
+  }, "Queue (", queue.length, ")"))), showQueue && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflowY: "auto",
