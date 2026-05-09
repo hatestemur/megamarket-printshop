@@ -962,7 +962,6 @@ function App() {
     }
   };
   const exportTextPDF = async (forceTemplate, passedQueue) => {
-    if (typeof jsPDF === 'undefined') { alert('PDF library not loaded yet — please wait a moment and try again.'); return; }
     const fontStyle = window._getFontCSS ? window._getFontCSS() : '';
     const liveTemplate = forceTemplate || template;
     const liveQueue = passedQueue || queue;
