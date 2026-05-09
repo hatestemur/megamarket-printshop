@@ -674,7 +674,6 @@ function App() {
   const [view, setView] = useState("editor");
   const [showQueue, setShowQueue] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
-  const [libraryFilter, setLibraryFilter] = useState(null);
   const historyRef = React.useRef([]);
   const historyIdxRef = React.useRef(-1);
   const [canUndo, setCanUndo] = useState(false);
@@ -839,15 +838,6 @@ function App() {
     } catch (e) {}
   }, [drafts]);
   const [landingDone, setLandingDone] = useState(true);
-  const [library, setLibrary] = useState(() => {
-    try {
-      const s = localStorage.getItem('megamarket_library');
-      if (s) return JSON.parse(s);
-    } catch (e) {}
-    return [];
-  });
-  const [editingLibId, setEditingLibId] = useState(null);
-  const [editingLibName, setEditingLibName] = useState("");
   const [toast, setToast] = useState(null);
   const _isDemoForm = f =>
     f.productName === "Cypressa Extra Virgin Olive Oil" &&
@@ -957,12 +947,6 @@ function App() {
       localStorage.setItem(STORAGE_KEY_BATCH8, JSON.stringify(batch8x4));
     } catch (e) {}
   }, [batch8x4]);
-  const STORAGE_KEY_LIB = "megamarket_library";
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_LIB, JSON.stringify(library));
-    } catch (e) {}
-  }, [library]);
   const saveDraft = () => {
     var _cards8x4$editIdx8x;
     const draft = {
@@ -1014,23 +998,7 @@ function App() {
     showToast("Draft loaded ✓");
   };
   const deleteDraft = id => setDrafts(d => d.filter(x => x.id !== id));
-  const addTagToEntry = (id, tag) => {
-    const t = tag.trim().toLowerCase();
-    if (!t) return;
-    setLibrary(lib => lib.map(e => {
-      var _e$tags;
-      return e.id === id && !((_e$tags = e.tags) !== null && _e$tags !== void 0 && _e$tags.includes(t)) ? {
-        ...e,
-        tags: [...(e.tags || []), t]
-      } : e;
-    }));
-  };
-  const removeTagFromEntry = (id, tag) => {
-    setLibrary(lib => lib.map(e => e.id === id ? {
-      ...e,
-      tags: (e.tags || []).filter(t => t !== tag)
-    } : e));
-  };
+
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -1043,80 +1011,6 @@ function App() {
       month: "short"
     });
     return first ? `${first.split(" ").slice(0, 3).join(" ")} · ${date}` : `${tmpl === "a4" ? "A4" : "8×4"} · ${date}`;
-  };
-  const saveToLibrary = name => {
-    const entry = {
-      id: Date.now(),
-      name: name || autoName(template, template === "a4" ? cards : batch8x4.length ? batch8x4[0] : cards8x4),
-      type: template,
-      cards: template === "a4" ? [...cards] : batch8x4.length ? batch8x4 : [cards8x4],
-      savedAt: new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric"
-      }),
-      tags: []
-    };
-    setLibrary(lib => [entry, ...lib]);
-    return entry;
-  };
-  const loadFromLibrary = entry => {
-    if (entry.type === "a4") {
-      setCards(entry.cards);
-      setTemplate("a4");
-      setForm({
-        ...EMPTY
-      });
-      setEditIdx(null);
-      setTab("batch");
-    } else {
-      setBatch8x4(entry.cards);
-      setCards8x4([0, 1, 2, 3].map(() => ({
-        productName: "",
-        size: "",
-        wasPrice: "",
-        nowPrice: "",
-        unitPrice: "",
-        badgeText: "SPECIAL OFFER",
-        badgeBg: R,
-        badgeFg: K,
-        priceMode: "single",
-        tiers: ["", ""],
-        validUntil: ""
-      })));
-      setTemplate("8x4");
-      setEditIdx8x4(0);
-      setTab8x4("batch");
-    }
-    setView("editor");
-    showToast("Template loaded");
-  };
-  const deleteFromLibrary = id => {
-    setLibrary(lib => lib.filter(e => e.id !== id));
-  };
-  const dupeInLibrary = entry => {
-    const copy = {
-      ...entry,
-      id: Date.now(),
-      name: entry.name + " (copy)",
-      savedAt: new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric"
-      })
-    };
-    setLibrary(lib => {
-      const idx = lib.findIndex(e => e.id === entry.id);
-      const next = [...lib];
-      next.splice(idx + 1, 0, copy);
-      return next;
-    });
-  };
-  const renameInLibrary = (id, name) => {
-    setLibrary(lib => lib.map(e => e.id === id ? {
-      ...e,
-      name
-    } : e));
   };
   const addSheetToBatch8 = () => {
     setBatch8x4(b => [...b, [...cards8x4]]);
@@ -1337,11 +1231,10 @@ function App() {
         try {
           document.body.removeChild(pdfContainer);
         } catch (e) {}
-        saveToLibrary();
         setCards([]);
         setBatch8x4([]);
         setShowQueue(false);
-        showToast("Downloaded & saved to library ✓");
+        showToast("PDF downloaded ✓");
       });
     });
   };
@@ -1431,7 +1324,6 @@ function App() {
         return { svgString, widthMm: 210, heightMm: 297 };
       });
 
-      saveToLibrary();
       await downloadPDF(pages, "megamarket-a4-" + Date.now() + ".pdf");
       setQueue(q => q.filter(i => !(i.type === "a4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
@@ -1481,7 +1373,6 @@ function App() {
           svgRows + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
-      saveToLibrary();
       await downloadPDF(pages, "megamarket-8x4-" + Date.now() + ".pdf");
       setQueue(q => q.filter(i => !(i.type === "8x4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
@@ -1665,8 +1556,7 @@ function App() {
         try {
           document.body.removeChild(_pdfEl);
         } catch (e) {}
-        saveToLibrary();
-        showToast("Downloaded & saved to library ✓ — working area cleared");
+        showToast("PDF downloaded ✓");
         clearCurrent();
       });
     });
@@ -2207,7 +2097,6 @@ function App() {
   }), queue.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowQueue(q => !q);
-      if (view === "library") setView("editor");
     },
     style: {
       background: "none",
@@ -2625,7 +2514,7 @@ function App() {
     }
   }, "\u2715"))))), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: showQueue || view === "library" ? "none" : "flex",
+      display: showQueue ? "none" : "flex",
       flex: 1,
       overflow: "hidden"
     }
@@ -3310,344 +3199,7 @@ function App() {
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
     fit: true
-  })))))))), view === "library" && /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      padding: 24,
-      background: "#f0f0f0",
-      minHeight: 0
-    }
-  }, library.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: { display: "flex", justifyContent: "flex-end", marginBottom: 12 }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => { if (window.confirm("Clear entire library? This cannot be undone.")) { setLibrary([]); localStorage.removeItem("megamarket_library"); showToast("Library cleared"); } },
-    style: { background: "none", border: "1px solid #ccc", color: "#888", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", padding: "5px 12px", cursor: "pointer", fontFamily: "system-ui,sans-serif", borderRadius: 2 }
-  }, "Clear All")), (() => {
-    const allTags = [...new Set(library.flatMap(e => e.tags || []))];
-    return allTags.length > 0 ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        flexWrap: "wrap",
-        marginBottom: 16,
-        alignItems: "center"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: 1.5,
-        textTransform: "uppercase",
-        fontFamily: "system-ui,sans-serif",
-        color: K,
-        marginRight: 4
-      }
-    }, "Filter:"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setLibraryFilter(null),
-      style: {
-        background: libraryFilter === null ? K : "#e0e0e0",
-        color: libraryFilter === null ? W : K,
-        border: "none",
-        padding: "4px 10px",
-        fontWeight: 700,
-        fontSize: 10,
-        letterSpacing: 1,
-        cursor: "pointer",
-        fontFamily: "system-ui,sans-serif",
-        textTransform: "uppercase"
-      }
-    }, "All"), allTags.map(tag => /*#__PURE__*/React.createElement("button", {
-      key: tag,
-      onClick: () => setLibraryFilter(libraryFilter === tag ? null : tag),
-      style: {
-        background: libraryFilter === tag ? Y : "#e0e0e0",
-        color: K,
-        border: "none",
-        padding: "4px 10px",
-        fontWeight: 700,
-        fontSize: 10,
-        letterSpacing: 1,
-        cursor: "pointer",
-        fontFamily: "system-ui,sans-serif",
-        textTransform: "uppercase"
-      }
-    }, tag))) : null;
-  })(), library.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "60vh",
-      color: "#bbb"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 42
-    }
-  }, "\uD83D\uDCC1"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      letterSpacing: 3,
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 8
-    }
-  }, "NO SAVED TEMPLATES"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "#bbb",
-      marginTop: 6,
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Export a template to save it here")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: 2,
-      color: "#000",
-      textTransform: "uppercase",
-      fontFamily: "system-ui,sans-serif",
-      marginBottom: 16
-    }
-  }, library.length, " saved template", library.length !== 1 ? "s" : ""), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 10
-    }
-  }, library.filter(e => !libraryFilter || (e.tags || []).includes(libraryFilter)).map(entry => /*#__PURE__*/React.createElement("div", {
-    key: entry.id,
-    style: {
-      background: W,
-      padding: "14px 16px",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 12,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flexShrink: 0,
-      width: 52,
-      height: 74,
-      overflow: "hidden",
-      background: "#f0f0f0",
-      position: "relative",
-      border: "1px solid #e0e0e0"
-    }
-  }, entry.type === "a4" && entry.cards[0] && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      transformOrigin: "top left",
-      transform: "scale(0.124)"
-    }
-  }, /*#__PURE__*/React.createElement(PriceCard, {
-    card: entry.cards[0],
-    scale: 1
-  })), entry.type === "8x4" && entry.cards[0] && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      transformOrigin: "top left",
-      transform: "scale(0.175)",
-      width: 420
-    }
-  }, (Array.isArray(entry.cards[0]) ? entry.cards[0] : [entry.cards[0]]).map((card, ci) => /*#__PURE__*/React.createElement("div", {
-    key: ci,
-    style: {
-      height: 148,
-      overflow: "hidden",
-      borderBottom: ci < 3 ? "1px dashed #ddd" : "none"
-    }
-  }, /*#__PURE__*/React.createElement(PriceCard8x4, {
-    card: card,
-    fit: true
-  }))))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, editingLibId === entry.id ? /*#__PURE__*/React.createElement("input", {
-    style: {
-      ...inp,
-      padding: "4px 8px",
-      fontSize: 14,
-      fontWeight: 800,
-      marginBottom: 2
-    },
-    value: editingLibName,
-    autoFocus: true,
-    onChange: e => setEditingLibName(e.target.value),
-    onBlur: () => {
-      renameInLibrary(entry.id, editingLibName || entry.name);
-      setEditingLibId(null);
-    },
-    onKeyDown: e => {
-      if (e.key === "Enter" || e.key === "Escape") {
-        renameInLibrary(entry.id, editingLibName || entry.name);
-        setEditingLibId(null);
-      }
-    }
-  }) : /*#__PURE__*/React.createElement("div", {
-    onClick: () => {
-      setEditingLibId(entry.id);
-      setEditingLibName(entry.name);
-    },
-    title: "Click to rename",
-    style: {
-      fontWeight: 800,
-      fontSize: 14,
-      fontFamily: "system-ui,sans-serif",
-      color: K,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      cursor: "text",
-      borderBottom: "1px dashed transparent"
-    },
-    onMouseEnter: e => e.target.style.borderBottomColor = "#ccc",
-    onMouseLeave: e => e.target.style.borderBottomColor = "transparent"
-  }, entry.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "#000",
-      fontFamily: "system-ui,sans-serif",
-      marginTop: 2
-    }
-  }, entry.type === "a4" ? `Promo · ${entry.cards.length} card${entry.cards.length !== 1 ? "s" : ""}` : `Shelf Talker · ${entry.cards.length} sheet${entry.cards.length !== 1 ? "s" : ""}`, " \xB7 ", entry.savedAt), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 4,
-      flexWrap: "wrap",
-      alignItems: "center",
-      marginTop: 4
-    }
-  }, (entry.tags || []).map(tag => /*#__PURE__*/React.createElement("span", {
-    key: tag,
-    style: {
-      background: Y,
-      color: K,
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: 1,
-      padding: "2px 7px",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: 3
-    },
-    onClick: () => removeTagFromEntry(entry.id, tag)
-  }, tag, " \u2715")), addingTagFor === entry.id ? /*#__PURE__*/React.createElement("input", {
-    autoFocus: true,
-    style: {
-      fontSize: 10,
-      padding: "2px 6px",
-      border: "1px solid #ccc",
-      fontFamily: "system-ui,sans-serif",
-      width: 80,
-      outline: "none"
-    },
-    placeholder: "tag name",
-    onBlur: () => setAddingTagFor(null),
-    onKeyDown: e => {
-      if (e.key === "Enter") {
-        addTagToEntry(entry.id, e.target.value);
-        setAddingTagFor(null);
-      }
-      if (e.key === "Escape") setAddingTagFor(null);
-    }
-  }) : (entry.tags || []).length < 5 && /*#__PURE__*/React.createElement("span", {
-    onClick: () => setAddingTagFor(entry.id),
-    style: {
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: 1,
-      color: K,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif",
-      textTransform: "uppercase",
-      padding: "2px 4px",
-      border: "1px dashed #aaa"
-    }
-  }, "+ Tag")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "none"
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      flexShrink: 0,
-      flexWrap: "wrap",
-      justifyContent: "flex-end"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => loadFromLibrary(entry),
-    style: {
-      background: K,
-      color: W,
-      border: "none",
-      padding: "8px 12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Load"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => dupeInLibrary(entry),
-    style: {
-      background: "#f0f0f0",
-      color: "#555",
-      border: "none",
-      padding: "8px 12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "Dupe"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      loadFromLibrary(entry);
-      setTimeout(() => print(), 300);
-    },
-    style: {
-      background: Y,
-      color: K,
-      border: "none",
-      padding: "8px 12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "\u2399 Export"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (window.confirm("Delete this template?")) deleteFromLibrary(entry.id);
-    },
-    style: {
-      background: "#f0f0f0",
-      color: "#c00",
-      border: "none",
-      padding: "8px 10px",
-      fontWeight: 700,
-      fontSize: 12,
-      cursor: "pointer",
-      fontFamily: "system-ui,sans-serif"
-    }
-  }, "\u2715")))))))));
+  }))))))))));
 }
     const domRoot = ReactDOM.createRoot(document.getElementById('root'));
     domRoot.render(React.createElement(App));
