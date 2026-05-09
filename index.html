@@ -1346,7 +1346,29 @@ function App() {
         img.src=url;
       });
 
+      // Register MadaniArabic font with jsPDF from embedded CSS
+      const getMadaniB64 = (weight) => {
+        try {
+          for (const sheet of document.styleSheets) {
+            for (const rule of sheet.cssRules) {
+              if (rule.type === CSSRule.FONT_FACE_RULE) {
+                if (String(rule.style.getPropertyValue("font-weight")).trim() === String(weight)) {
+                  const src = rule.style.getPropertyValue("src");
+                  const m = src.match(/url\(["']?data:[^;]+;base64,([^"')]+)/);
+                  if (m) return m[1].replace(/\s/g,"");
+                }
+              }
+            }
+          }
+        } catch(e) {}
+        return null;
+      };
       const pdf = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+      const b64normal = getMadaniB64(400);
+      const b64bold   = getMadaniB64(700);
+      const FONT = b64normal ? "MadaniArabic" : "helvetica";
+      if (b64normal) { pdf.addFileToVFS("MadaniArabic-normal.otf", b64normal); pdf.addFont("MadaniArabic-normal.otf","MadaniArabic","normal"); }
+      if (b64bold)   { pdf.addFileToVFS("MadaniArabic-bold.otf",   b64bold);   pdf.addFont("MadaniArabic-bold.otf",  "MadaniArabic","bold"); }
 
       items.forEach((card, idx) => {
         if (idx>0) pdf.addPage("a4","portrait");
@@ -1363,7 +1385,7 @@ function App() {
         pdf.rect(0,H-BH,W,BH,"F");
 
         // SPECIAL OFFER
-        pdf.setFont("helvetica","bold");
+        pdf.setFont(FONT,"bold");
         pdf.setFontSize(20);
         pdf.setTextColor(254,222,0);
         pdf.text("SPECIAL OFFER",W/2,H-BH+BH*0.65,{align:"center"});
@@ -1371,7 +1393,7 @@ function App() {
         // Product name
         const nameStr = card.productName || "";
         const namePt = nameStr.length>40?14:nameStr.length>26?16:nameStr.length>16?18:22;
-        pdf.setFont("helvetica","bold");
+        pdf.setFont(FONT,"bold");
         pdf.setFontSize(namePt);
         pdf.setTextColor(0,0,0);
         const nameLines = pdf.splitTextToSize(nameStr, W-ml-8);
@@ -1380,7 +1402,7 @@ function App() {
         // Size
         let yAfter = 14 + nameLines.length*(namePt*0.352778+1);
         if (card.size) {
-          pdf.setFont("helvetica","normal"); pdf.setFontSize(11); pdf.setTextColor(0,0,0);
+          pdf.setFont(FONT,"normal"); pdf.setFontSize(11); pdf.setTextColor(0,0,0);
           pdf.text(card.size, ml, yAfter+5);
         }
 
@@ -1391,39 +1413,39 @@ function App() {
           const n=tiers.length||1;
           const tierPt=Math.min(46,Math.max(12,Math.floor(46/n)));
           if (card.nowPrice) {
-            pdf.setFont("helvetica","normal"); pdf.setFontSize(13);
+            pdf.setFont(FONT,"normal"); pdf.setFontSize(13);
             pdf.text(card.nowPrice,mr,110,{align:"right"});
           }
           const tierH=tierPt*0.352778+3;
           const startY=160-(n*tierH)/2+tierH;
           tiers.forEach((tier,i)=>{
             const fs=i===n-1?tierPt:Math.round(tierPt*0.72);
-            pdf.setFont("helvetica","bold"); pdf.setFontSize(fs);
+            pdf.setFont(FONT,"bold"); pdf.setFontSize(fs);
             pdf.text(tier,mr,startY+i*(fs*0.352778+3),{align:"right"});
           });
           if (card.unitPrice) {
-            pdf.setFont("helvetica","normal"); pdf.setFontSize(10);
+            pdf.setFont(FONT,"normal"); pdf.setFontSize(10);
             pdf.text(card.unitPrice,mr,startY+n*(tierPt*0.352778+4),{align:"right"});
           }
         } else {
           if (card.wasPrice && card.priceMode==="wasnow") {
-            pdf.setFont("helvetica","normal"); pdf.setFontSize(20);
+            pdf.setFont(FONT,"normal"); pdf.setFontSize(20);
             const ww=pdf.getTextWidth(card.wasPrice);
             pdf.text(card.wasPrice,mr,128,{align:"right"});
             const ly=128-20*0.352778*0.35;
             pdf.setDrawColor(0); pdf.setLineWidth(0.5); pdf.line(mr-ww,ly,mr,ly);
           }
-          pdf.setFont("helvetica","bold"); pdf.setFontSize(58);
+          pdf.setFont(FONT,"bold"); pdf.setFontSize(58);
           pdf.text(card.nowPrice||"",mr,164,{align:"right"});
           if (card.unitPrice) {
-            pdf.setFont("helvetica","normal"); pdf.setFontSize(11);
+            pdf.setFont(FONT,"normal"); pdf.setFontSize(11);
             pdf.text(card.unitPrice,mr,176,{align:"right"});
           }
         }
 
         // Valid until
         if (card.validUntil) {
-          pdf.setFont("helvetica","normal"); pdf.setFontSize(9); pdf.setTextColor(0,0,0);
+          pdf.setFont(FONT,"normal"); pdf.setFontSize(9); pdf.setTextColor(0,0,0);
           pdf.text("Valid until "+card.validUntil, ml, H-BH-4);
         }
       });
