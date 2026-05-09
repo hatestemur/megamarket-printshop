@@ -1360,7 +1360,7 @@ function App() {
       const queueA4 = liveQueue.filter(q => String(q.type) === "a4");
       const readyData = queueA4.filter(q => q.status === "ready").map(q => q.data);
       const workingData = queueA4.filter(q => q.status !== "ready").map(q => q.data);
-      const formData = (form.productName || form.nowPrice) ? [form] : [];
+      const formData = !passedQueue && (form.productName || form.nowPrice) ? [form] : [];
       const items = [...readyData, ...workingData, ...formData].filter(Boolean);
       if (!items.length) { showToast("Add a card first — fill in the form or save to queue"); return; }
 
