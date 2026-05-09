@@ -1311,6 +1311,8 @@ function App() {
     // Always read from ref — guaranteed current
     const liveQueue = queueRef.current || [];
     const isA4 = template === "a4";
+    // DEBUG: confirm what's happening
+    showToast("Exporting... template=" + template + " queue=" + liveQueue.length);
 
     if (isA4) {
       // ── A4 export ────────────────────────────────────────────
@@ -1364,11 +1366,14 @@ function App() {
         return null;
       };
       const pdf = new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
-      const b64normal = getMadaniB64(400);
-      const b64bold   = getMadaniB64(700);
-      const FONT = b64normal ? "MadaniArabic" : "helvetica";
-      if (b64normal) { pdf.addFileToVFS("MadaniArabic-normal.otf", b64normal); pdf.addFont("MadaniArabic-normal.otf","MadaniArabic","normal"); }
-      if (b64bold)   { pdf.addFileToVFS("MadaniArabic-bold.otf",   b64bold);   pdf.addFont("MadaniArabic-bold.otf",  "MadaniArabic","bold"); }
+      let FONT = "helvetica";
+      try {
+        const b64normal = getMadaniB64(400);
+        const b64bold   = getMadaniB64(700);
+        if (b64normal) { pdf.addFileToVFS("MadaniArabic-n.otf", b64normal); pdf.addFont("MadaniArabic-n.otf","MadaniArabic","normal"); }
+        if (b64bold)   { pdf.addFileToVFS("MadaniArabic-b.otf", b64bold);   pdf.addFont("MadaniArabic-b.otf","MadaniArabic","bold"); }
+        if (b64normal||b64bold) FONT = "MadaniArabic";
+      } catch(fontErr) { console.warn("Font reg failed, using Helvetica:", fontErr); FONT = "helvetica"; }
 
       items.forEach((card, idx) => {
         if (idx>0) pdf.addPage("a4","portrait");
