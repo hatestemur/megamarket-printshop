@@ -1374,28 +1374,33 @@ function App() {
         return wasLine + nowLine + unitLine;
       };
 
+      // Measure text using canvas for accurate word-wrapping (matches browser rendering)
+      const _measureCtx = (() => { const c = document.createElement('canvas'); return c.getContext('2d'); })();
+      const _wrapText = (text, maxW, fontSize, fontWeight) => {
+        _measureCtx.font = (fontWeight || '500') + ' ' + fontSize + 'px MadaniArabic, sans-serif';
+        const words = (text || '').split(' ');
+        const lines = [];
+        let cur = '';
+        for (const w of words) {
+          const test = cur ? cur + ' ' + w : w;
+          if (_measureCtx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+          else { cur = test; }
+        }
+        if (cur) lines.push(cur);
+        return lines;
+      };
       const pages = items.map(card => {
         const nameLen = (card.productName || "").length;
         const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
-        // Word-wrap product name for SVG export
         const _nX = sideW + 18;
-        const _nW = CW - sideW - 28;
+        const _nW = CW - sideW - 26;
         const _nLH = Math.round(nameFontSize * 1.25);
-        const _nCW = nameFontSize * 0.54;
-        const _nWords = (card.productName || "").split(" ");
-        const _nLines = [];
-        let _nCur = "";
-        for (const _w of _nWords) {
-          const _t = _nCur ? _nCur + " " + _w : _w;
-          if (_t.length * _nCW > _nW && _nCur) { _nLines.push(_nCur); _nCur = _w; }
-          else { _nCur = _t; }
-        }
-        if (_nCur) _nLines.push(_nCur);
+        const _nLines = _wrapText(card.productName || '', _nW, nameFontSize, '500');
         const nameTextSVG = _nLines.map((line, i) =>
           '<text x="' + _nX + '" y="' + (14 + nameFontSize + i * _nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + line + '</text>'
         ).join("");
         const _nBlockH = nameFontSize + (_nLines.length - 1) * _nLH;
-        const sizeY = 14 + _nBlockH + Math.round(nameFontSize * 0.4) + 17;
+        const sizeY = 14 + _nBlockH + 6 + 17;
         const sizeText = card.size ? '<text x="' + (sideW+18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : '';
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
