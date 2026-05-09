@@ -2081,17 +2081,16 @@ function App() {
     }
   }, "\u21AA"), (view === "editor" || showQueue) && /*#__PURE__*/React.createElement("button", {
     onClick: () => exportPDF(template, queue),
-    disabled: template === "a4" ? !cards.length : false,
     style: {
-      background: (template === "a4" ? cards.length : true) ? Y : "#333",
-      color: (template === "a4" ? cards.length : true) ? K : "#666",
+      background: Y,
+      color: K,
       border: "none",
       padding: "8px 12px",
       fontWeight: 800,
       fontSize: 11,
       letterSpacing: 1.5,
       textTransform: "uppercase",
-      cursor: template === "8x4" || cards.length ? "pointer" : "not-allowed",
+      cursor: "pointer",
       fontFamily: "system-ui, sans-serif"
     }
   }, "\u2399 Export"))), /*#__PURE__*/React.createElement("button", { onClick: () => exportBlank(), style: { background: "rgba(255,255,255,0.12)", color: W, border: "none", padding: "8px 12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" } }, "Blank"), /*#__PURE__*/React.createElement("div", {
@@ -2287,7 +2286,7 @@ function App() {
       display: "flex",
       gap: 6
     }
-  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, queue.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
       setShowQueue(false);
@@ -2305,7 +2304,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queue.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setShowQueue(false);
@@ -2545,7 +2544,7 @@ function App() {
       display: "flex",
       gap: 6
     }
-  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, queue.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
       setShowQueue(false);
@@ -2563,7 +2562,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queue.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setShowQueue(false);
@@ -2803,7 +2802,7 @@ function App() {
       display: "flex",
       gap: 6
     }
-  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, queue.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
       setShowQueue(false);
@@ -2821,7 +2820,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queue.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setShowQueue(false);
@@ -3061,7 +3060,7 @@ function App() {
       display: "flex",
       gap: 6
     }
-  }, queueReady.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, queue.filter(q => q.type === "a4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("a4");
       setShowQueue(false);
@@ -3079,7 +3078,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queueReady.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
+  }, "\u2399 Promo (", queueReady.filter(q => q.type === "a4").length, ")"), queue.filter(q => q.type === "8x4").length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setTemplate("8x4");
       setShowQueue(false);
