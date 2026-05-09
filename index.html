@@ -1326,7 +1326,10 @@ function App() {
         return [];
       };
       const items = getItems().filter(Boolean);
-      if (!items.length) { showToast("Nothing to export — fill in a card or add to queue"); return; }
+      if (!items.length) {
+        showToast("Queue: " + liveQueue.length + " items, types: " + liveQueue.map(q=>q.type+"/"+q.status).join(", ") + " | form: " + (form.productName||"(empty)"));
+        return;
+      }
 
       const priceSVG = card => {
         if (card.priceMode === "multibuy") {
