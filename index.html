@@ -744,7 +744,7 @@ function App() {
   }, [queue]);
   const queueWorking = queue.filter(q => q.status === 'working');
   const queueReady = queue.filter(q => q.status === 'ready');
-  const addToQueue = status => {
+  const addToQueue = (status, andExport = false) => {
     if (template === 'a4') {
       if (!canSave) return;
       const item = {
@@ -764,7 +764,10 @@ function App() {
       setForm({
         ...EMPTY
       });
-      showToast(status === 'ready' ? 'Added to Ready ✓' : 'Saved to Working ✓');
+      showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
+      if (andExport && status === 'ready') {
+        setTimeout(() => exportPDF('a4', [item]), 50);
+      }
     } else {
       var _cards8x4$find;
       if (!canAddSheet) return;
@@ -793,7 +796,10 @@ function App() {
         tiers: ['', ''],
         validUntil: ''
       })));
-      showToast(status === 'ready' ? 'Added to Ready ✓' : 'Saved to Working ✓');
+      showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
+      if (andExport && status === 'ready') {
+        setTimeout(() => exportPDF('8x4', [item]), 50);
+      }
     }
   };
   const moveQueue = (id, status) => setQueue(q => q.map(i => i.id === id ? {
@@ -843,13 +849,14 @@ function App() {
   const [editingLibId, setEditingLibId] = useState(null);
   const [editingLibName, setEditingLibName] = useState("");
   const [toast, setToast] = useState(null);
+  const _isDemoForm = f =>
+    f.productName === "Cypressa Extra Virgin Olive Oil" &&
+    f.nowPrice === "£24.99" && f.size === "5000ml";
   const set = (k, v) => {
     if (k === 'priceMode') pushHistory();
     setForm(f => {
-      const next = {
-        ...f,
-        [k]: v
-      };
+      const base = _isDemoForm(f) ? {...EMPTY} : f;
+      const next = { ...base, [k]: v };
       if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
         next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
       }
@@ -921,6 +928,14 @@ function App() {
           e.preventDefault();
           undo();
         }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        addToQueue('ready', true);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+        e.preventDefault();
+        exportPDF(template, queue);
       }
     };
     window.addEventListener('keydown', handler);
@@ -2765,38 +2780,47 @@ function App() {
       gap: 8
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => addToQueue('working'),
+    onClick: () => addToQueue('ready', true),
     disabled: !canSave,
-    style: {
-      flex: 1,
-      background: canSave ? "#333" : "#ddd",
-      color: W,
-      border: "none",
-      padding: "12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: "uppercase",
-      cursor: canSave ? "pointer" : "not-allowed",
-      fontFamily: "system-ui, sans-serif"
-    }
-  }, "Save Draft"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => addToQueue('ready'),
-    disabled: !canSave,
+    title: "Export immediately (\u2318\u21a9)",
     style: {
       flex: 1,
       background: canSave ? Y : "#ddd",
       color: canSave ? K : "#aaa",
       border: "none",
-      padding: "12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
+      padding: "14px",
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
       textTransform: "uppercase",
       cursor: canSave ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "+ Ready to Print"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Export Now"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => addToQueue('working'),
+    disabled: !canSave,
+    title: "Save to queue without exporting",
+    style: {
+      background: canSave ? "#333" : "#ddd",
+      color: canSave ? "#fff" : "#aaa",
+      border: "none",
+      padding: "14px 12px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      cursor: canSave ? "pointer" : "not-allowed",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, "Draft")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      fontSize: 10,
+      color: "#999",
+      fontFamily: "system-ui,sans-serif",
+      marginTop: 6
+    }
+  }, "\u2318\u21A9 to export \u00b7 \u2318P to export queue")), /*#__PURE__*/React.createElement("div", {
     className: "preview-pane",
     style: {
       display: undefined
@@ -3211,23 +3235,24 @@ function App() {
       cursor: canAddSheet ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "Save Draft"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => addToQueue('ready'),
+  }, "Draft"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => addToQueue('ready', true),
     disabled: !canAddSheet,
+    title: "Export immediately (\u2318\u21a9)",
     style: {
       flex: 1,
       background: canAddSheet ? Y : "#ddd",
       color: canAddSheet ? K : "#aaa",
       border: "none",
-      padding: "12px",
-      fontWeight: 800,
-      fontSize: 11,
-      letterSpacing: 1.5,
+      padding: "14px",
+      fontWeight: 900,
+      fontSize: 13,
+      letterSpacing: 2,
       textTransform: "uppercase",
       cursor: canAddSheet ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "+ Ready to Print")))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Export Now")))), /*#__PURE__*/React.createElement("div", {
     className: "preview-pane"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
