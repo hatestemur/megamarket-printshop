@@ -117,19 +117,26 @@ function calcUnitPrice(size, price) {
   if (!size || !price) return "";
   let priceVal = 0;
   const pMatch = price.match(/^(\d+\.?\d*)\s*p$/i);
-  const gbpMatch = price.match(/\u00a3?(\d+\.?\d+)/);
+  const gbpMatch = price.match(/\u00a3?(\d+\.?\d*)/);
   if (pMatch) priceVal = parseFloat(pMatch[1]) / 100;else if (gbpMatch) priceVal = parseFloat(gbpMatch[1]);
   if (!priceVal) return "";
   const s = size.toLowerCase().trim();
-  // Multipack with unit: "6x330ml", "4 x 500g" → price per item
+  // Multipack with unit: "6x330ml", "4 x 500g" → per 100ml / 100g based on total volume
   const multipackM = s.match(/^(\d+\.?\d*)\s*[x\u00d7]\s*(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
   if (multipackM) {
     const n = parseFloat(multipackM[1]);
-    if (!n) return "";
-    const perItem = priceVal / n;
-    const pence = perItem * 100;
-    if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
-    return "\u00a3" + perItem.toFixed(2) + " each";
+    let qty = parseFloat(multipackM[2]);
+    let unit = multipackM[3].toLowerCase();
+    if (!n || !qty) return "";
+    if (unit === "kg") { qty *= 1000; unit = "g"; }
+    if (unit === "l") { qty *= 1000; unit = "ml"; }
+    if (unit === "cl") { qty *= 10; unit = "ml"; }
+    const totalQty = n * qty;
+    const per100 = priceVal / totalQty * 100;
+    const label = unit === "g" ? "100g" : "100ml";
+    const pence = per100 * 100;
+    if (pence < 100) return Math.round(pence * 10) / 10 + "p per " + label;
+    return "\u00a3" + per100.toFixed(2) + " per " + label;
   }
   // Pack-only: "12 pack", "pack of 6", "6pk", "x12", "24 cans"
   const packOnly = s.match(/^(\d+)\s*(pack|pk|pcs?|pieces?|count|ct|cans?|bottles?|bags?|tins?|rolls?|sheets?|tabs?|tablets?|caps?|capsules?|sachets?|pods?|wipes?)$/i) || s.match(/^pack\s+of\s+(\d+)$/i) || s.match(/^x\s*(\d+)$/i);
@@ -1024,12 +1031,11 @@ function App() {
           const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
           priceText = wasLine + nowLine + unitLine;
         }
-        const badgeText = '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>';
         const validText = card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '';
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
-          nameTextSVG + sizeText + priceText + badgeText + validText +
+          nameTextSVG + sizeText + priceText + validText +
           '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
