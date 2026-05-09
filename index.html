@@ -1162,12 +1162,45 @@ function App() {
       pdf.save('megamarket-blank-a4.pdf');
       showToast('Blank A4 template downloaded ✓');
     } else {
-      // 8x4 blank — just call exportPDF with empty cards
-      const saved = [...cards8x4];
-      setCards8x4(blank8x4);
-      await new Promise(r => setTimeout(r, 50));
-      await exportPDF();
-      setCards8x4(saved);
+      // 8x4 blank — build SVG directly (don't rely on stale React state)
+      const CW8 = 420, CH8 = 148, sideW8 = 64, CARD_W = 304, xStart = CW8 - CARD_W;
+      const logoPath8 = 'M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z';
+      const logoBotR8 = Math.round(800 * sideW8 / 607.7);
+      const scaleX8 = (sideW8 / 607.7).toFixed(5);
+      const badge8 = 'SPECIAL OFFER';
+      const longestWord8 = Math.max(...badge8.split(' ').map(w => w.length));
+      const badgeFs8 = Math.max(7, Math.min(11, Math.floor(56 / (longestWord8 * 0.62))));
+      const fontCSS8 = window._getFontCSS ? window._getFontCSS() : '';
+      const cardRows = [0,1,2,3].map(ci => {
+        const yo = ci * CH8;
+        const sepLine = ci < 3 ? `<line x1="${xStart}" y1="${(ci+1)*CH8}" x2="${CW8}" y2="${(ci+1)*CH8}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : '';
+        return `<rect x="${xStart}" y="${yo}" width="${CARD_W}" height="${CH8}" fill="white"/>`
+          + `<rect x="${xStart}" y="${yo}" width="${sideW8}" height="${logoBotR8}" fill="#000"/>`
+          + `<rect x="${xStart}" y="${yo+logoBotR8}" width="${sideW8}" height="${CH8-logoBotR8}" fill="#CC2222"/>`
+          + `<g transform="translate(${xStart},${yo}) scale(${scaleX8})"><path d="${logoPath8}" fill="#FEDE00"/></g>`
+          + `<text x="${xStart+sideW8/2}" y="${yo+logoBotR8+(CH8-logoBotR8)*0.46}" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="${badgeFs8}" letter-spacing="0.44">SPECIAL</text>`
+          + `<text x="${xStart+sideW8/2}" y="${yo+logoBotR8+(CH8-logoBotR8)*0.67}" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="${badgeFs8}" letter-spacing="0.44">OFFER</text>`
+          + sepLine;
+      }).join('');
+      const svgStr8 = `<svg xmlns="http://www.w3.org/2000/svg" width="${CW8}" height="${CH8*4}" viewBox="0 0 ${CW8} ${CH8*4}">`
+        + `<defs><style>${fontCSS8}</style></defs>`
+        + `<rect width="${xStart}" height="${CH8*4}" fill="white"/>`
+        + `<line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH8*4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>`
+        + cardRows
+        + `</svg>`;
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      const pxW = Math.round(210 * 3.7795275591 * 3);
+      const pxH = Math.round(297 * 3.7795275591 * 3);
+      const canvas8 = document.createElement('canvas');
+      canvas8.width = pxW; canvas8.height = pxH;
+      const ctx8 = canvas8.getContext('2d');
+      const blob8 = new Blob([svgStr8], {type:'image/svg+xml'});
+      const url8 = URL.createObjectURL(blob8);
+      await new Promise(res => { const img = new Image(); img.onload = () => { ctx8.drawImage(img, 0, 0, pxW, pxH); URL.revokeObjectURL(url8); res(); }; img.src = url8; });
+      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
+      pdf.save('megamarket-blank-8x4.pdf');
+      showToast('Blank shelf talker template downloaded ✓');
     }
   };
 
