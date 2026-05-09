@@ -1448,8 +1448,17 @@ function App() {
           const logoBotR = Math.round(800 * sideW / 607.7);
           const scaleX = (sideW / 607.7).toFixed(5);
           const yo = ci * CH;
-          const nameLen = (card.productName || "").length;
-          const nameFontSize = Math.max(10, Math.min(17, nameLen > 30 ? 10 : nameLen > 20 ? 12 : nameLen > 10 ? 14 : 17));
+          // Word-wrap product name at fixed 17px matching live preview
+          const _8nFS = 17;
+          const _8nLH = Math.round(_8nFS * 1.2); // 20px line height
+          const _8nX = xStart + sideW + 12;
+          const _8nW = CW - 14 - _8nX; // available width (right-edge at CW-14)
+          const _8nLines = _wrapText(card.productName || '', _8nW, _8nFS, '500');
+          const nameTextSVG8 = _8nLines.map((line, i) =>
+            '<text x="' + _8nX + '" y="' + (yo + 5 + _8nFS + i * _8nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + _8nFS + '" letter-spacing="-0.2">' + line + '</text>'
+          ).join('');
+          const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
+          const sizeY8 = yo + 5 + _8nBlockH + 2 + 10; // matches marginTop:2 + fontSize:10
           const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
           const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
           const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
@@ -1460,8 +1469,8 @@ function App() {
             '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' +
             '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.46) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">SPECIAL</text>' +
             '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>' +
-            '<text x="' + (xStart+sideW+10) + '" y="' + (yo+nameFontSize+4) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '">' + (card.productName || '') + '</text>' +
-            (card.size ? '<text x="' + (xStart+sideW+10) + '" y="' + (yo+nameFontSize+18) + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') +
+            nameTextSVG8 +
+            (card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') +
             wasLine + nowLine + unitLine + validLine +
             (ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ddd" stroke-width="0.5"/>' : '');
         }).join('');
