@@ -481,7 +481,7 @@ function PriceCard8x4({
     x: xStart + sideW + 12,
     y: 5,
     width: CARD_W - sideW - 20,
-    height: 56
+    height: 72
   }, /*#__PURE__*/React.createElement("div", {
     xmlns: "http://www.w3.org/1999/xhtml"
   }, /*#__PURE__*/React.createElement("div", {
@@ -933,7 +933,7 @@ function App() {
             '<text x="' + _8nX + '" y="' + (yo + 5 + _8nFS + i * _8nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + _8nFS + '" letter-spacing="-0.2">' + line + '</text>'
           ).join('');
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
-          const sizeY8 = yo + 5 + _8nBlockH + 2 + 10; // matches marginTop:2 + fontSize:10
+          const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
           const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
           const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
@@ -1049,7 +1049,7 @@ function App() {
             '<text x="' + _8nX + '" y="' + (yo + 5 + _8nFS + i * _8nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + _8nFS + '" letter-spacing="-0.2">' + line + '</text>'
           ).join('');
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
-          const sizeY8 = yo + 5 + _8nBlockH + 2 + 10;
+          const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
           const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
           const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
