@@ -1128,78 +1128,47 @@ function App() {
 
   // Export blank template
   const exportBlank = async () => {
-    const blankCard = {...EMPTY};
-    const blank8x4 = [0,1,2,3].map(() => ({...EMPTY}));
+    const fontStyle = window._getFontCSS ? window._getFontCSS() : '';
+    const logoPath = 'M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z';
     showToast('Generating blank template…');
     if (template === 'a4') {
       const CW = 420, CH = 594, sideW = 92, badgeH = 100;
-      const card = blankCard;
-      const sideWa = sideW, CWa = CW, CHa = CH;
       const badge = 'SPECIAL OFFER';
       const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
-      const logoPath = 'M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z';
-      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${CWa}" height="${CHa}" viewBox="0 0 ${CWa} ${CHa}">`
-        + `<rect width="${CWa}" height="${CHa}" fill="#fff"/>`
-        + `<rect x="0" y="0" width="${sideWa}" height="${CHa}" fill="#000"/>`
-        + `<g transform="scale(${(sideWa/607.7).toFixed(5)})"><path d="${logoPath}" fill="#FEDE00"/></g>`
-        + `<rect x="0" y="${CHa-badgeH}" width="${CWa}" height="${badgeH}" fill="#CC2222"/>`
-        + `<text x="${CWa/2}" y="${CHa-badgeH+badgeH*0.65}" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="${badgeFontSize}" letter-spacing="3">${badge}</text>`
-        + `</svg>`;
-      const fontCSS = window._getFontCSS ? window._getFontCSS() : '';
-      const svgWithFont = svgStr.replace('<svg xmlns', `<svg xmlns`).replace('</svg>', `<defs><style>${fontCSS}</style></defs></svg>`);
-      const canvas = document.createElement('canvas');
-      canvas.width = CWa * 3; canvas.height = CHa * 3;
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      const blob = new Blob([svgWithFont], {type:'image/svg+xml'});
-      const url = URL.createObjectURL(blob);
-      await new Promise(res => { img.onload = res; img.src = url; });
-      ctx.scale(3,3); ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
-      pdf.save('megamarket-blank-a4.pdf');
+      const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">'
+        + '<defs><style>' + fontStyle + '</style></defs>'
+        + '<rect width="' + CW + '" height="' + CH + '" fill="white"/>'
+        + '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="#000"/>'
+        + '<g transform="scale(' + (sideW / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>'
+        + '<rect x="0" y="' + (CH - badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>'
+        + '<text x="' + (CW / 2) + '" y="' + (CH - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>'
+        + '</svg>';
+      await downloadPDF([{ svgString, widthMm: 210, heightMm: 297 }], 'megamarket-blank-a4.pdf');
       showToast('Blank A4 template downloaded ✓');
     } else {
-      // 8x4 blank — build SVG directly (don't rely on stale React state)
-      const CW8 = 420, CH8 = 148, sideW8 = 64, CARD_W = 304, xStart = CW8 - CARD_W;
-      const logoPath8 = 'M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z';
-      const logoBotR8 = Math.round(800 * sideW8 / 607.7);
-      const scaleX8 = (sideW8 / 607.7).toFixed(5);
-      const badge8 = 'SPECIAL OFFER';
-      const longestWord8 = Math.max(...badge8.split(' ').map(w => w.length));
-      const badgeFs8 = Math.max(7, Math.min(11, Math.floor(56 / (longestWord8 * 0.62))));
-      const fontCSS8 = window._getFontCSS ? window._getFontCSS() : '';
+      const CW = 420, CH = 148, sideW = 64, CARD_W = 304, xStart = CW - CARD_W;
+      const logoBotR = Math.round(800 * sideW / 607.7);
+      const scaleX = (sideW / 607.7).toFixed(5);
+      const badge = 'SPECIAL OFFER';
+      const longestWord = Math.max(...badge.split(' ').map(w => w.length));
+      const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (longestWord * 0.62))));
       const cardRows = [0,1,2,3].map(ci => {
-        const yo = ci * CH8;
-        const sepLine = ci < 3 ? `<line x1="${xStart}" y1="${(ci+1)*CH8}" x2="${CW8}" y2="${(ci+1)*CH8}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>` : '';
-        return `<rect x="${xStart}" y="${yo}" width="${CARD_W}" height="${CH8}" fill="white"/>`
-          + `<rect x="${xStart}" y="${yo}" width="${sideW8}" height="${logoBotR8}" fill="#000"/>`
-          + `<rect x="${xStart}" y="${yo+logoBotR8}" width="${sideW8}" height="${CH8-logoBotR8}" fill="#CC2222"/>`
-          + `<g transform="translate(${xStart},${yo}) scale(${scaleX8})"><path d="${logoPath8}" fill="#FEDE00"/></g>`
-          + `<text x="${xStart+sideW8/2}" y="${yo+logoBotR8+(CH8-logoBotR8)*0.46}" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="${badgeFs8}" letter-spacing="0.44">SPECIAL</text>`
-          + `<text x="${xStart+sideW8/2}" y="${yo+logoBotR8+(CH8-logoBotR8)*0.67}" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="${badgeFs8}" letter-spacing="0.44">OFFER</text>`
-          + sepLine;
+        const yo = ci * CH;
+        return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>'
+          + '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>'
+          + '<rect x="' + xStart + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + (CH - logoBotR) + '" fill="#CC2222"/>'
+          + '<g transform="translate(' + xStart + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>'
+          + '<text x="' + (xStart + sideW / 2) + '" y="' + (yo + logoBotR + (CH - logoBotR) * 0.46) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">SPECIAL</text>'
+          + '<text x="' + (xStart + sideW / 2) + '" y="' + (yo + logoBotR + (CH - logoBotR) * 0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>'
+          + (ci < 3 ? '<line x1="' + xStart + '" y1="' + ((ci + 1) * CH) + '" x2="' + CW + '" y2="' + ((ci + 1) * CH) + '" stroke="#bbb" stroke-width="0.5" stroke-dasharray="6,4"/>' : '');
       }).join('');
-      const svgStr8 = `<svg xmlns="http://www.w3.org/2000/svg" width="${CW8}" height="${CH8*4}" viewBox="0 0 ${CW8} ${CH8*4}">`
-        + `<defs><style>${fontCSS8}</style></defs>`
-        + `<rect width="${xStart}" height="${CH8*4}" fill="white"/>`
-        + `<line x1="${xStart}" y1="0" x2="${xStart}" y2="${CH8*4}" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>`
+      const svgString = '<svg width="' + CW + '" height="' + (CH * 4) + '" viewBox="0 0 ' + CW + ' ' + (CH * 4) + '" xmlns="http://www.w3.org/2000/svg">'
+        + '<defs><style>' + fontStyle + '</style></defs>'
+        + '<rect width="' + xStart + '" height="' + (CH * 4) + '" fill="white"/>'
+        + '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + (CH * 4) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
         + cardRows
-        + `</svg>`;
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-      const pxW = Math.round(210 * 3.7795275591 * 3);
-      const pxH = Math.round(297 * 3.7795275591 * 3);
-      const canvas8 = document.createElement('canvas');
-      canvas8.width = pxW; canvas8.height = pxH;
-      const ctx8 = canvas8.getContext('2d');
-      const blob8 = new Blob([svgStr8], {type:'image/svg+xml'});
-      const url8 = URL.createObjectURL(blob8);
-      await new Promise(res => { const img = new Image(); img.onload = () => { ctx8.drawImage(img, 0, 0, pxW, pxH); URL.revokeObjectURL(url8); res(); }; img.src = url8; });
-      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
-      pdf.save('megamarket-blank-8x4.pdf');
+        + '</svg>';
+      await downloadPDF([{ svgString, widthMm: 210, heightMm: 297 }], 'megamarket-blank-8x4.pdf');
       showToast('Blank shelf talker template downloaded ✓');
     }
   };
