@@ -961,6 +961,116 @@ function App() {
       showToast("PDF downloaded ✓");
     }
   };
+  const exportTextPDF = async (forceTemplate, passedQueue) => {
+    if (typeof jsPDF === 'undefined') { alert('PDF library not loaded yet — please wait a moment and try again.'); return; }
+    const fontStyle = window._getFontCSS ? window._getFontCSS() : '';
+    const liveTemplate = forceTemplate || template;
+    const liveQueue = passedQueue || queue;
+    const _measureCtx2 = (() => { const c = document.createElement('canvas'); return c.getContext('2d'); })();
+    const _wrapText2 = (text, maxW, fontSize, fontWeight) => {
+      _measureCtx2.font = (fontWeight || '500') + ' ' + fontSize + 'px MadaniArabic, sans-serif';
+      const words = (text || '').split(' ');
+      const lines = []; let cur = '';
+      for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        if (_measureCtx2.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+        else { cur = test; }
+      }
+      if (cur) lines.push(cur);
+      return lines;
+    };
+    if (liveTemplate === 'a4') {
+      const CW = 420, CH = 594, sideW = 92, badgeH = 100;
+      const badge = 'SPECIAL OFFER';
+      const badgeLen = badge.length;
+      const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badgeLen * 0.62))));
+      const items = [...(liveQueue.filter(q => q.type === 'a4' && q.status === 'ready').map(q => q.data)),
+        ...(!passedQueue && form.productName ? [form] : [])];
+      if (!items.length) { showToast('Nothing to export'); return; }
+      const pages = items.map(card => {
+        const nameLen = (card.productName || '').length;
+        const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
+        const _nX = sideW + 18;
+        const _nW = CW - sideW - 26;
+        const _nLH = Math.round(nameFontSize * 1.25);
+        const _nLines = _wrapText2(card.productName || '', _nW, nameFontSize, '500');
+        const nameTextSVG = _nLines.map((line, i) =>
+          '<text x="' + _nX + '" y="' + (14 + nameFontSize + i * _nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + line + '</text>'
+        ).join('');
+        const _nBlockH = nameFontSize + (_nLines.length - 1) * _nLH;
+        const sizeY = 14 + _nBlockH + 6 + 17;
+        const sizeText = card.size ? '<text x="' + (sideW+18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : '';
+        // price SVG — reuse same logic, all fills already #000
+        let priceText = '';
+        if (card.priceMode === 'multibuy') {
+          const tiers = (card.tiers || []).filter(t => t && t.trim());
+          const n = tiers.length || 1;
+          const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
+          const availW = CW - 18 - sideW - 20;
+          const capFs = Math.floor(availW / (maxTierLen * 0.55));
+          const lastFs = Math.min(n === 1 ? 72 : n === 2 ? 62 : n === 3 ? 52 : 42, capFs);
+          const smallFs = Math.min(n === 1 ? 72 : n === 2 ? 36 : n === 3 ? 28 : 22, Math.floor(capFs * 0.7));
+          const ys = []; let acc = 0;
+          tiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs*0.78); acc += fs*1.25; });
+          const startY = 494 - 14 - acc;
+          const nowRef = card.nowPrice ? '<text x="' + (CW-18) + '" y="' + (startY-18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30">' + card.nowPrice + '</text>' : '';
+          priceText = nowRef + tiers.map((tier, i) => {
+            const fs = i === n-1 ? lastFs : smallFs;
+            const each = parseTierEach(tier);
+            return '<text x="' + (CW-18) + '" y="' + (startY+ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + tier + '</text>' + (each ? '<text x="' + (CW-18) + '" y="' + (startY+ys[i]+Math.round(lastFs*0.28)+18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + each + '</text>' : '');
+          }).join('');
+        } else {
+          const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+          const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+          const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="466" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
+          priceText = wasLine + nowLine + unitLine;
+        }
+        const badgeText = '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>';
+        const validText = card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '';
+        const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
+          nameTextSVG + sizeText + priceText + badgeText + validText +
+          '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
+      });
+      await downloadPDF(pages, 'megamarket-a4-textonly-' + Date.now() + '.pdf');
+      showToast('Text-only PDF downloaded ✓');
+    } else {
+      const CW = 420, CH = 148, sideW = 64, xStart = CW - 304;
+      const all8x4 = liveQueue.filter(q => String(q.type) === '8x4' && q.status === 'ready').map(q => q.data);
+      const sheets = all8x4.length ? all8x4 : [cards8x4];
+      const pages = sheets.map(sheet => {
+        const svgRows = sheet.map((card, ci) => {
+          const yo = ci * CH;
+          const _8nFS = 17, _8nLH = Math.round(17 * 1.2);
+          const _8nX = xStart + sideW + 12;
+          const _8nW = CW - 14 - _8nX;
+          const _8nLines = _wrapText2(card.productName || '', _8nW, _8nFS, '500');
+          const nameTextSVG8 = _8nLines.map((line, i) =>
+            '<text x="' + _8nX + '" y="' + (yo + 5 + _8nFS + i * _8nLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + _8nFS + '" letter-spacing="-0.2">' + line + '</text>'
+          ).join('');
+          const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
+          const sizeY8 = yo + 5 + _8nBlockH + 2 + 10;
+          const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+          const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+          const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+          const validLine = card.validUntil ? '<text x="' + _8nX + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '';
+          const sizeText8 = card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '';
+          const cutLine = ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ccc" stroke-width="0.5"/>' : '';
+          return nameTextSVG8 + sizeText8 + wasLine + nowLine + unitLine + validLine + cutLine;
+        }).join('');
+        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + (CH*4) + '" fill="white"/>' +
+          '<line x1="' + xStart + '" y1="0" x2="' + xStart + '" y2="' + (CH*4) + '" stroke="#ccc" stroke-width="0.5" stroke-dasharray="6,4"/>' +
+          svgRows + '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
+      });
+      await downloadPDF(pages, 'megamarket-8x4-textonly-' + Date.now() + '.pdf');
+      showToast('Text-only PDF downloaded ✓');
+    }
+  };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `
 
         *{box-sizing:border-box}
@@ -1576,6 +1686,23 @@ function App() {
       fontFamily: "system-ui, sans-serif"
     }
   }, "\u2399 Export Now"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => exportTextPDF('a4', form.productName ? [{ type: 'a4', status: 'ready', data: form }] : []),
+    disabled: !canSave,
+    title: "Export text only — no colour ink",
+    style: {
+      background: canSave ? "#fff" : "#ddd",
+      color: canSave ? "#000" : "#aaa",
+      border: canSave ? "1.5px solid #000" : "1.5px solid #ddd",
+      padding: "14px 10px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: canSave ? "pointer" : "not-allowed",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Text Only"), /*#__PURE__*/React.createElement("button", {
     onClick: () => addToQueue('working'),
     disabled: !canSave,
     title: "Save to queue without exporting",
@@ -1901,7 +2028,24 @@ function App() {
       cursor: canAddSheet ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "\u2399 Export Now")))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Export Now"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => exportTextPDF('8x4', cards8x4.some(c => c.productName) ? [{ type: '8x4', status: 'ready', data: cards8x4 }] : []),
+    disabled: !canAddSheet,
+    title: "Export text only — no colour ink",
+    style: {
+      background: canAddSheet ? "#fff" : "#ddd",
+      color: canAddSheet ? "#000" : "#aaa",
+      border: canAddSheet ? "1.5px solid #000" : "1.5px solid #ddd",
+      padding: "14px 10px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: canAddSheet ? "pointer" : "not-allowed",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Text Only")))), /*#__PURE__*/React.createElement("div", {
     className: "preview-pane"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
