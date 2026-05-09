@@ -1239,9 +1239,27 @@ function App() {
       const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
       const nameLen = (card.productName || "").length;
       const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
-      const sizeY = 14 + nameFontSize + Math.round(nameFontSize * 0.4) + 17;
+      // Word-wrap product name for SVG export
+      const nameX = sideWa + 18;
+      const nameAvailW = CWa - sideWa - 28;
+      const nameLineH = Math.round(nameFontSize * 1.25);
+      const nameCharW = nameFontSize * 0.54;
+      const nameWords = (card.productName || "").split(" ");
+      const nameLines = [];
+      let nameCur = "";
+      for (const w of nameWords) {
+        const test = nameCur ? nameCur + " " + w : w;
+        if (test.length * nameCharW > nameAvailW && nameCur) { nameLines.push(nameCur); nameCur = w; }
+        else { nameCur = test; }
+      }
+      if (nameCur) nameLines.push(nameCur);
+      const nameTextSVG = nameLines.map((line, i) =>
+        '<text x="' + nameX + '" y="' + (14 + nameFontSize + i * nameLineH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + line + '</text>'
+      ).join("");
+      const nameBlockH = nameFontSize + (nameLines.length - 1) * nameLineH;
+      const sizeY = 14 + nameBlockH + Math.round(nameFontSize * 0.4) + 17;
       const sizeText = card.size ? '<text x="' + (sideWa + 18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + card.size + '</text>' : "";
-      return '<div class="page">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CWa + ' ' + CHa + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CWa + '" height="' + CHa + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideWa + '" height="' + CHa + '" fill="black"/>' + '<g transform="scale(' + (sideWa / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + '<text x="' + (sideWa + 18) + '" y="' + (14 + nameFontSize) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFontSize + '" letter-spacing="-0.5">' + card.productName + '</text>' + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CHa - badgeH) + '" width="' + CWa + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CWa / 2 + '" y="' + (CHa - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="' + XFONT + '" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + (card.validUntil ? '<text x="' + (sideWa + 18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '') + '</svg></div>';
+      return '<div class="page">' + '<svg width="210mm" height="297mm" viewBox="0 0 ' + CWa + ' ' + CHa + '" xmlns="http://www.w3.org/2000/svg">' + '<rect width="' + CWa + '" height="' + CHa + '" fill="white"/>' + '<rect x="0" y="0" width="' + sideWa + '" height="' + CHa + '" fill="black"/>' + '<g transform="scale(' + (sideWa / 607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' + nameTextSVG + sizeText + a4PriceSVG(card) + '<rect x="0" y="' + (CHa - badgeH) + '" width="' + CWa + '" height="' + badgeH + '" fill="#CC2222"/>' + '<text x="' + CWa / 2 + '" y="' + (CHa - badgeH + badgeH * 0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="' + XFONT + '" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + badge + '</text>' + (card.validUntil ? '<text x="' + (sideWa + 18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '') + '</svg></div>';
     }).join("");
     // Build 8x4 sheets
     const CW8 = 420,
