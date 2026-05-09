@@ -4207,7 +4207,12 @@ function App() {
       background: "#f0f0f0",
       minHeight: 0
     }
-  }, (() => {
+  }, library.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: { display: "flex", justifyContent: "flex-end", marginBottom: 12 }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => { if (window.confirm("Clear entire library? This cannot be undone.")) { setLibrary([]); localStorage.removeItem("megamarket_library"); showToast("Library cleared"); } },
+    style: { background: "none", border: "1px solid #ccc", color: "#888", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", padding: "5px 12px", cursor: "pointer", fontFamily: "system-ui,sans-serif", borderRadius: 2 }
+  }, "Clear All")), (() => {
     const allTags = [...new Set(library.flatMap(e => e.tags || []))];
     return allTags.length > 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
