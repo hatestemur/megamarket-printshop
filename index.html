@@ -1318,16 +1318,13 @@ function App() {
       const badge = "SPECIAL OFFER";
       const badgeFontSize = Math.max(18, Math.min(40, Math.floor(380 / (badge.length * 0.62))));
 
-      const getItems = () => {
-        const ready = liveQueue.filter(q => q.type === "a4" && q.status === "ready").map(q => q.data);
-        if (ready.length) return ready;
-        const all = liveQueue.filter(q => q.type === "a4").map(q => q.data);
-        if (all.length) return all;
-        if (form.productName || form.nowPrice) return [form];
-        return [];
-      };
-      const items = getItems().filter(Boolean);
-      if (!items.length) { showToast("Nothing to export — fill in a card or add to queue"); return; }
+      // Collect all A4 cards: ready queue first, then working queue, then current form
+      const queueA4 = liveQueue.filter(q => String(q.type) === "a4");
+      const readyData = queueA4.filter(q => q.status === "ready").map(q => q.data);
+      const workingData = queueA4.filter(q => q.status !== "ready").map(q => q.data);
+      const formData = (form.productName || form.nowPrice) ? [form] : [];
+      const items = [...readyData, ...workingData, ...formData].filter(Boolean);
+      if (!items.length) { showToast("Add a card first — fill in the form or save to queue"); return; }
 
       const priceSVG = card => {
         if (card.priceMode === "multibuy") {
@@ -1380,8 +1377,8 @@ function App() {
 
     } else {
       // ── 8x4 Shelf Talker export ──
-      const ready8x4 = liveQueue.filter(q => q.type === "8x4" && q.status === "ready").map(q => q.data);
-      const sheets = ready8x4.length ? ready8x4 : [cards8x4];
+      const all8x4 = liveQueue.filter(q => String(q.type) === "8x4").map(q => q.data);
+      const sheets = all8x4.length ? all8x4 : [cards8x4];
       const CW = 420, CH = 148, sideW = 64, CARD_W = 304, xStart = CW - CARD_W;
       const pages = sheets.map(sheet => {
         const svgRows = sheet.map((card, ci) => {
