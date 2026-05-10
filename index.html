@@ -934,9 +934,30 @@ function App() {
           ).join('');
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
-          const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
-          const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
-          const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+          let priceLines8 = '';
+          if (card.priceMode === 'multibuy') {
+            const activeTiers = (card.tiers || []).filter(t => t && t.trim());
+            const n = activeTiers.length || 1;
+            const logoBotR8 = Math.round(800 * sideW / 607.7);
+            const priceH = (logoBotR8 - 4) - 30;
+            const tierH = Math.max(12, Math.min(34, Math.floor((priceH - 13) / n)));
+            const lastFs = tierH, smallFs = Math.max(10, Math.floor(tierH * 0.7));
+            const ys = []; let acc = 0;
+            activeTiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
+            const tierAnchorY = 116;
+            const startY = yo + tierAnchorY - acc;
+            if (card.nowPrice) priceLines8 += '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20">' + card.nowPrice + '</text>';
+            activeTiers.forEach((tier, i) => {
+              const fs = i === n-1 ? lastFs : smallFs;
+              priceLines8 += '<text x="' + (CW-14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.3">' + tier + '</text>';
+              if (i === n-1) { const each = parseTierEach(tier); if (each) priceLines8 += '<text x="' + (CW-14) + '" y="' + (yo+126) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>'; }
+            });
+          } else {
+            const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+            priceLines8 = wasLine + nowLine + unitLine;
+          }
           const validLine = card.validUntil ? '<text x="' + (xStart+sideW+12) + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '';
           return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' +
             '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' +
@@ -946,7 +967,7 @@ function App() {
             '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>' +
             nameTextSVG8 +
             (card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '') +
-            wasLine + nowLine + unitLine + validLine +
+            priceLines8 + validLine +
             (ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ddd" stroke-width="0.5"/>' : '');
         }).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
@@ -1050,12 +1071,32 @@ function App() {
           ).join('');
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
-          const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
-          const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
-          const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+          let priceText8 = '';
+          if (card.priceMode === 'multibuy') {
+            const activeTiers = (card.tiers || []).filter(t => t && t.trim());
+            const n = activeTiers.length || 1;
+            const logoBotR8 = Math.round(800 * sideW / 607.7);
+            const priceH = (logoBotR8 - 4) - 30;
+            const tierH = Math.max(12, Math.min(34, Math.floor((priceH - 13) / n)));
+            const lastFs = tierH, smallFs = Math.max(10, Math.floor(tierH * 0.7));
+            const ys = []; let acc = 0;
+            activeTiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
+            const startY = yo + 116 - acc;
+            if (card.nowPrice) priceText8 += '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20">' + card.nowPrice + '</text>';
+            activeTiers.forEach((tier, i) => {
+              const fs = i === n-1 ? lastFs : smallFs;
+              priceText8 += '<text x="' + (CW-14) + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.3">' + tier + '</text>';
+              if (i === n-1) { const each = parseTierEach(tier); if (each) priceText8 += '<text x="' + (CW-14) + '" y="' + (yo+126) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + each + '</text>'; }
+            });
+          } else {
+            const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
+            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + card.unitPrice + '</text>' : '';
+            priceText8 = wasLine + nowLine + unitLine;
+          }
           const validLine = card.validUntil ? '<text x="' + _8nX + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + card.validUntil + '</text>' : '';
           const sizeText8 = card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + card.size + '</text>' : '';
-          return nameTextSVG8 + sizeText8 + wasLine + nowLine + unitLine + validLine;
+          return nameTextSVG8 + sizeText8 + priceText8 + validLine;
         }).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
