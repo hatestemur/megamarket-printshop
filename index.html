@@ -334,7 +334,7 @@ function PriceCard({
     fill: "#ddd"
   }, "0.00")), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
     x: CW - 18,
-    y: 466,
+    y: 490,
     textAnchor: "end",
     fill: "#000",
     fontFamily: FONT,
@@ -861,7 +861,7 @@ function App() {
         }
         const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
         const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
-        const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="480" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
+        const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="490" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
         return wasLine + nowLine + unitLine;
       };
 
@@ -1042,7 +1042,7 @@ function App() {
         } else {
           const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + card.wasPrice + '</text>' : '';
           const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + (card.nowPrice || '') + '</text>';
-          const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="480" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
+          const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="490" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + card.unitPrice + '</text>' : '';
           priceText = wasLine + nowLine + unitLine;
         }
         const validText = card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + card.validUntil + '</text>' : '';
