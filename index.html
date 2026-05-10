@@ -733,15 +733,10 @@ function App() {
   const loadFromQueue = item => {
     setTemplate(item.type);
     if (item.type === 'a4') {
-      setForm({
-        ...EMPTY,
-        ...item.data
-      });
-      setTab('editor');
+      setForm({ ...EMPTY, ...item.data });
     } else {
       setCards8x4(item.data);
       setEditIdx8x4(0);
-      setTab8x4('editor');
     }
     removeQueue(item.id);
     setShowQueue(false);
