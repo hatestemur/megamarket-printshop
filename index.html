@@ -251,12 +251,19 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // Banner: prefer a real texture when one is loaded for this category,
   // else fall back to procedural blobs. Nested <svg> uses preserveAspectRatio
   // "slice" to cover-fit the source texture into the banner viewport.
+  // IDs inside the texture (masks etc.) must be namespaced per card —
+  // otherwise the same id appears 3× when 3 cards share a category and
+  // the SVG fails to parse as an Image.
   let banner;
   const tex = (typeof window !== 'undefined' && window.TEXTURE_DATA && cat.key) ? window.TEXTURE_DATA[cat.key] : null;
   if (tex) {
+    const idPrefix = 'tex' + cat.key + '_c' + ci + '_';
+    const inner = tex.inner
+      .replace(/id="([^"]+)"/g, 'id="' + idPrefix + '$1"')
+      .replace(/url\(#([^)]+)\)/g, 'url(#' + idPrefix + '$1)');
     banner =
-      '<svg x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' +
-      tex.inner +
+      '<svg xmlns="http://www.w3.org/2000/svg" x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' +
+      inner +
       '</svg>';
   } else {
     const blobScale = FW / 320;
