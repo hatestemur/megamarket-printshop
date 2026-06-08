@@ -21,6 +21,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="textures.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -190,14 +191,14 @@ const EMPTY = {
 
 /* ─── Fresh-section categories (Fruit & Veg, butcher cuts) ── */
 const CATEGORIES = {
-  'fruit-veg': { label: 'Fruit & Veg', color: '#27a554', darkColor: '#0a5f29' },
-  'chicken':   { label: 'Chicken',     color: '#f4b942', darkColor: '#a87014' },
-  'beef':      { label: 'Beef',        color: '#c8302e', darkColor: '#7a1311' },
-  'lamb':      { label: 'Lamb',        color: '#e08bb8', darkColor: '#883460' },
-  'rabbit':    { label: 'Rabbit',      color: '#a8845c', darkColor: '#5c4327' },
-  'duck':      { label: 'Duck',        color: '#3a7b9f', darkColor: '#173d54' },
-  'turkey':    { label: 'Turkey',      color: '#d97031', darkColor: '#7a3712' },
-  'fish':      { label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
+  'fruit-veg': { key: 'fruit-veg', label: 'Fruit & Veg', color: '#27a554', darkColor: '#0a5f29' },
+  'chicken':   { key: 'chicken',   label: 'Chicken',     color: '#f4b942', darkColor: '#a87014' },
+  'beef':      { key: 'beef',      label: 'Beef',        color: '#c8302e', darkColor: '#7a1311' },
+  'lamb':      { key: 'lamb',      label: 'Lamb',        color: '#e08bb8', darkColor: '#883460' },
+  'rabbit':    { key: 'rabbit',    label: 'Rabbit',      color: '#a8845c', darkColor: '#5c4327' },
+  'duck':      { key: 'duck',      label: 'Duck',        color: '#3a7b9f', darkColor: '#173d54' },
+  'turkey':    { key: 'turkey',    label: 'Turkey',      color: '#d97031', darkColor: '#7a3712' },
+  'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
 const EMPTY_FRESH = { productName:'', variety:'', nowPrice:'', multibuyPrice:'' };
@@ -245,21 +246,29 @@ function brandMarkSVG(x, y, h, fg, bg) {
 function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const yo = (yOffset != null) ? yOffset : ci * FH;
   const cx = xS + FW / 2;
-  const bannerH = 24;  // 12mm
+  const bannerH = 40;  // 20mm — matches reference proportions
 
-  // Banner: solid colour + organic dark blobs.
-  // The blob bank is authored for a 320×30 canvas; scale it to the
-  // actual banner size, translated to (xS, yo). Blobs stay within
-  // the banner's y-range (max y ≈ 28 × 0.8 = 22.4), so no clip needed.
-  const blobScale = FW / 320;
-  const blobScaleY = bannerH / 30;
-  const blobsSVG = BANNER_BLOBS.map(d =>
-    '<path d="' + d + '" fill="' + cat.darkColor + '"/>'
-  ).join('');
-  const banner =
-    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
-    '<g transform="translate(' + xS + ' ' + yo + ') scale(' + blobScale.toFixed(4) + ' ' + blobScaleY.toFixed(4) + ')">' +
-    blobsSVG + '</g>';
+  // Banner: prefer a real texture when one is loaded for this category,
+  // else fall back to procedural blobs. Nested <svg> uses preserveAspectRatio
+  // "slice" to cover-fit the source texture into the banner viewport.
+  let banner;
+  const tex = (typeof window !== 'undefined' && window.TEXTURE_DATA && cat.key) ? window.TEXTURE_DATA[cat.key] : null;
+  if (tex) {
+    banner =
+      '<svg x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' +
+      tex.inner +
+      '</svg>';
+  } else {
+    const blobScale = FW / 320;
+    const blobScaleY = bannerH / 30;
+    const blobsSVG = BANNER_BLOBS.map(d =>
+      '<path d="' + d + '" fill="' + cat.darkColor + '"/>'
+    ).join('');
+    banner =
+      '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
+      '<g transform="translate(' + xS + ' ' + yo + ') scale(' + blobScale.toFixed(4) + ' ' + blobScaleY.toFixed(4) + ')">' +
+      blobsSVG + '</g>';
+  }
 
   // Product name (item line) - ALL CAPS, bold, centered below banner
   const item = (card.productName || '').toUpperCase();
