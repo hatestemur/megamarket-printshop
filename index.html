@@ -188,6 +188,100 @@ const EMPTY = {
   validUntil: ""
 };
 
+/* ─── Fresh-section categories (Fruit & Veg, butcher cuts) ── */
+const CATEGORIES = {
+  'fruit-veg': { label: 'Fruit & Veg', color: '#22a45d',
+    pattern: '<path d="M4,10 Q4,3 10,3 Q16,3 16,10 Q16,17 10,17 Q4,17 4,10 Z" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.75"/><path d="M10,3 L10,17" stroke="#ffffff" stroke-width="0.8" opacity="0.75"/>' },
+  'chicken':   { label: 'Chicken',     color: '#e8a23a',
+    pattern: '<path d="M2,12 Q6,4 10,12 T18,12" stroke="#ffffff" stroke-width="1.4" fill="none" opacity="0.85" stroke-linecap="round"/>' },
+  'beef':      { label: 'Beef',        color: '#b62a2a',
+    pattern: '<path d="M0,8 C4,4 8,12 12,8 S20,4 24,8" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.75"/><path d="M0,14 C4,10 8,18 12,14 S20,10 24,14" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.75"/>' },
+  'lamb':      { label: 'Lamb',        color: '#d670a6',
+    pattern: '<circle cx="5" cy="5" r="2.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.85"/><circle cx="14" cy="5" r="1.5" fill="#ffffff" opacity="0.7"/><circle cx="5" cy="14" r="1.5" fill="#ffffff" opacity="0.7"/>' },
+  'rabbit':    { label: 'Rabbit',      color: '#8c6e4e',
+    pattern: '<ellipse cx="10" cy="6" rx="3" ry="2" fill="#ffffff" opacity="0.85"/><ellipse cx="6" cy="11" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/><ellipse cx="14" cy="11" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/><ellipse cx="10" cy="14" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/>' },
+  'duck':      { label: 'Duck',        color: '#2d6584',
+    pattern: '<path d="M2,10 Q6,6 10,10 Q14,14 18,10" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.85"/><path d="M2,16 Q6,12 10,16 Q14,20 18,16" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.65"/>' },
+  'turkey':    { label: 'Turkey',      color: '#c8632b',
+    pattern: '<g stroke="#ffffff" stroke-width="0.9" fill="none" opacity="0.8" stroke-linecap="round"><line x1="10" y1="18" x2="3" y2="6"/><line x1="10" y1="18" x2="7" y2="3"/><line x1="10" y1="18" x2="10" y2="2"/><line x1="10" y1="18" x2="13" y2="3"/><line x1="10" y1="18" x2="17" y2="6"/></g>' },
+  'fish':      { label: 'Fish',        color: '#1e8aa9',
+    pattern: '<path d="M0,12 A4,4 0 0,1 8,12 M8,12 A4,4 0 0,1 16,12 M-4,18 A4,4 0 0,1 4,18 M4,18 A4,4 0 0,1 12,18 M12,18 A4,4 0 0,1 20,18" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.85"/>' }
+};
+const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
+const EMPTY_FRESH = { productName:'', variety:'', origin:'', unit:'', nowPrice:'', wasPrice:'' };
+
+/* ─── Build SVG markup for ONE Fresh card at vertical offset yo ── */
+function freshCardSVG(card, cat, ci, FW, FH, xS) {
+  const bannerH = 30;
+  const yo = ci * FH;
+  const _ctx = (typeof document !== 'undefined') ? (window._mmMeasureCtx || (window._mmMeasureCtx = document.createElement('canvas').getContext('2d'))) : null;
+  const wrap = (text, maxW, fs, weight) => {
+    if (!_ctx) return [text||''];
+    _ctx.font = (weight||'500') + ' ' + fs + 'px MadaniArabic, sans-serif';
+    const words = (text || '').split(' ');
+    const lines = []; let cur = '';
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w;
+      if (_ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test;
+    }
+    if (cur) lines.push(cur);
+    return lines.slice(0, 2); // max 2 lines for product name
+  };
+  const nameLines = wrap(card.productName || '', FW - 20, 19, '600');
+  const nameStartY = yo + bannerH + 22;
+  const nameLH = 22;
+  const nameSVG = nameLines.map((line, i) =>
+    '<text x="' + (xS + 10) + '" y="' + (nameStartY + i * nameLH) + '" fill="#000" font-family="MadaniArabic" font-weight="600" font-size="19" letter-spacing="-0.3">' + escSVG(line) + '</text>'
+  ).join('');
+  const varietyY = nameStartY + (nameLines.length - 1) * nameLH + 15;
+  const variety = card.variety ? '<text x="' + (xS + 10) + '" y="' + varietyY + '" fill="#666" font-family="MadaniArabic" font-style="italic" font-size="12">' + escSVG(card.variety) + '</text>' : '';
+  const origin = card.origin ? '<text x="' + (xS + 10) + '" y="' + (yo + FH - 10) + '" fill="#666" font-family="MadaniArabic" font-weight="500" font-size="11">' + escSVG(card.origin) + '</text>' : '';
+  const wasLine = card.wasPrice ? '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 56) + '" text-anchor="end" fill="#999" font-family="MadaniArabic" font-weight="500" font-size="13" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
+  const nowLine = '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 24) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="800" font-size="32" letter-spacing="-1">' + escSVG(card.nowPrice || '') + '</text>';
+  const unitLine = card.unit ? '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 10) + '" text-anchor="end" fill="#666" font-family="MadaniArabic" font-weight="500" font-size="11">' + escSVG(card.unit) + '</text>' : '';
+  const labelLetters = (cat.label || '').toUpperCase();
+  const labelFS = labelLetters.length > 10 ? 14 : 17;
+  return (
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="white"/>' +
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="url(#pat-' + Object.keys(CATEGORIES).find(k => CATEGORIES[k] === cat) + ')"/>' +
+    '<text x="' + (xS + FW / 2) + '" y="' + (yo + bannerH / 2 + labelFS * 0.35) + '" text-anchor="middle" fill="#ffffff" font-family="MadaniArabic" font-weight="900" font-size="' + labelFS + '" letter-spacing="3">' + escSVG(labelLetters) + '</text>' +
+    nameSVG + variety + origin + wasLine + nowLine + unitLine +
+    (ci < 3 ? '<line x1="' + xS + '" y1="' + (yo + FH) + '" x2="420" y2="' + (yo + FH) + '" stroke="#ddd" stroke-width="0.5" stroke-dasharray="4,3"/>' : '')
+  );
+}
+
+/* ─── React component: render full Fresh sheet (4 cards) ─── */
+function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
+  const FW = 222, FH = 148, CW = 420, CH = FH * 4;
+  const xS = CW - FW;
+  const cat = CATEGORIES[category] || CATEGORIES['fruit-veg'];
+  const svgInner = cards.map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS)).join('');
+  const defs = '<defs><pattern id="pat-' + category + '" patternUnits="userSpaceOnUse" width="20" height="20">' + cat.pattern + '</pattern></defs>';
+  const fullSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" style="display:block">' +
+    defs +
+    '<rect width="' + xS + '" height="' + CH + '" fill="#f0f0f0"/>' +
+    '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#aaa" stroke-width="0.8" stroke-dasharray="5,3"/>' +
+    svgInner + '</svg>';
+  return React.createElement('div', { style: { position:'relative', width: fit?'100%':CW, height: fit?'100%':CH } },
+    React.createElement('div', { style: { width:'100%', height:'100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
+    onSelect && [0,1,2,3].map(i => React.createElement('div', {
+      key: i,
+      onClick: () => onSelect(i),
+      style: {
+        position:'absolute',
+        left: (xS/CW*100)+'%',
+        top: (i*FH/CH*100)+'%',
+        width: (FW/CW*100)+'%',
+        height: (FH/CH*100)+'%',
+        cursor:'pointer',
+        outline: editIdx===i ? '3px solid #FEDE00' : '3px solid transparent',
+        boxSizing:'border-box'
+      }
+    }))
+  );
+}
+
 /* ─── Price Card SVG ────────────────────────────────── */
 function PriceCard({
   card,
@@ -648,6 +742,17 @@ function App() {
     }));
   });
   const [editIdx8x4, setEditIdx8x4] = useState(0);
+  const [cardsFresh, setCardsFresh] = useState(() => {
+    try {
+      const s = localStorage.getItem('megamarket_cards_fresh');
+      if (s) return JSON.parse(s);
+    } catch (e) {}
+    return [0,1,2,3].map(() => ({ ...EMPTY_FRESH }));
+  });
+  const [editIdxFresh, setEditIdxFresh] = useState(0);
+  const [freshCategory, setFreshCategory] = useState(() => {
+    try { return localStorage.getItem('megamarket_fresh_category') || 'fruit-veg'; } catch (e) { return 'fruit-veg'; }
+  });
   const [showQueue, setShowQueue] = useState(false);
   const [queue, setQueue] = useState(() => {
     try {
@@ -690,6 +795,25 @@ function App() {
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
         setTimeout(() => exportPDF('a4', [item]), 50);
+      }
+    } else if (template === 'fresh') {
+      if (!canAddFresh) return;
+      const cat = CATEGORIES[freshCategory] || CATEGORIES['fruit-veg'];
+      const firstName = (cardsFresh.find(c => c.productName) || {}).productName || 'Untitled';
+      const item = {
+        id: Date.now(),
+        type: 'fresh',
+        status,
+        name: firstName + ' · ' + cat.label,
+        data: { category: freshCategory, cards: cardsFresh.map(c => ({ ...c })) },
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      };
+      setQueue(q => [item, ...q]);
+      setCardsFresh([0,1,2,3].map(() => ({ ...EMPTY_FRESH })));
+      setEditIdxFresh(0);
+      showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
+      if (andExport && status === 'ready') {
+        setTimeout(() => exportPDF('fresh', [item]), 50);
       }
     } else {
       var _cards8x4$find;
@@ -734,6 +858,11 @@ function App() {
     setTemplate(item.type);
     if (item.type === 'a4') {
       setForm({ ...EMPTY, ...item.data });
+    } else if (item.type === 'fresh') {
+      const d = item.data || {};
+      setFreshCategory(d.category || 'fruit-veg');
+      setCardsFresh((d.cards || [0,1,2,3].map(() => ({ ...EMPTY_FRESH }))).map(c => ({ ...EMPTY_FRESH, ...c })));
+      setEditIdxFresh(0);
     } else {
       setCards8x4(item.data);
       setEditIdx8x4(0);
@@ -812,16 +941,25 @@ function App() {
       localStorage.setItem(STORAGE_KEY_8X4, JSON.stringify(cards8x4));
     } catch (e) {}
   }, [cards8x4]);
+  React.useEffect(() => {
+    try { localStorage.setItem('megamarket_cards_fresh', JSON.stringify(cardsFresh)); } catch (e) {}
+  }, [cardsFresh]);
+  React.useEffect(() => {
+    try { localStorage.setItem('megamarket_fresh_category', freshCategory); } catch (e) {}
+  }, [freshCategory]);
+  const cardF = cardsFresh[editIdxFresh];
+  const setF = (k, v) => setCardsFresh(prev => prev.map((c, i) => i === editIdxFresh ? { ...c, [k]: v } : c));
+  const canAddFresh = cardsFresh.some(c => c.productName && c.nowPrice);
 
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
-  const canAddSheet = cards8x4.some(c => c.productName);
+  const canAddSheet = template === 'fresh' ? canAddFresh : cards8x4.some(c => c.productName);
 
   // Export blank template
 
-    const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : cards8x4.some(c => c.productName));
+    const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : template === "fresh" ? canAddFresh : cards8x4.some(c => c.productName));
   const exportPDF = async (forceTemplate, passedQueue) => {
     if (isExportingRef.current) { showToast("Export already in progress…"); return; }
     if (!window.jspdf) { alert("PDF library not loaded yet — please wait a moment and try again."); return; }
@@ -916,6 +1054,28 @@ function App() {
       setQueue(q => q.filter(i => !(i.type === "a4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
 
+    } else if (liveTemplate === 'fresh') {
+      // ── Fresh (Fruit & Veg / Butcher) export ──
+      const allFresh = liveQueue.filter(q => q.type === 'fresh' && q.status === 'ready').map(q => q.data);
+      const sheets = allFresh.length ? allFresh
+        : (canAddFresh ? [{ category: freshCategory, cards: cardsFresh }] : []);
+      if (!sheets.length) { showToast('Nothing to export'); return; }
+      const FW = 222, FH = 148, CW = 420, CH = FH * 4, xS = CW - FW;
+      const pages = sheets.map(sheet => {
+        const cat = CATEGORIES[sheet.category] || CATEGORIES['fruit-veg'];
+        const patternId = 'pat-' + (sheet.category || 'fruit-veg');
+        const svgRows = sheet.cards.map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS)).join('');
+        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
+          '<defs><style>' + fontStyle + '</style>' +
+          '<pattern id="' + patternId + '" patternUnits="userSpaceOnUse" width="20" height="20">' + cat.pattern + '</pattern></defs>' +
+          '<rect width="' + xS + '" height="' + CH + '" fill="white"/>' +
+          '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
+          svgRows + '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
+      });
+      await downloadPDF(pages, 'megamarket-fresh-' + Date.now() + '.pdf');
+      setQueue(q => q.filter(i => !(i.type === 'fresh' && i.status === 'ready')));
+      showToast('PDF downloaded ✓');
     } else {
       // ── 8x4 Shelf Talker export ──
       const all8x4 = liveQueue.filter(q => String(q.type) === "8x4").map(q => q.data);
@@ -1276,7 +1436,23 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, "Shelf 8x4"), /*#__PURE__*/React.createElement("div", {
+  }, "Shelf 8x4"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setTemplate("fresh"); setShowQueue(false); },
+    style: {
+      background: "none",
+      color: template === "fresh" && !showQueue ? W : "rgba(255,255,255,0.5)",
+      border: "none",
+      borderBottom: template === "fresh" && !showQueue ? `2px solid ${W}` : "2px solid transparent",
+      padding: "8px 12px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Fresh"), /*#__PURE__*/React.createElement("div", {
     style: { flex: 1 }
   }), queue.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -2127,7 +2303,99 @@ function App() {
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
     fit: true
-  }))))))))));
+  }))))))), template === "fresh" && /*#__PURE__*/React.createElement("div", {
+    style: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }
+  }, /*#__PURE__*/React.createElement("div", { className: "main-row" },
+    /*#__PURE__*/React.createElement("div", { className: "form-pane" },
+      /*#__PURE__*/React.createElement("div", { style: { height: 3, background: (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).color, marginBottom: 14, borderRadius: 2 } }),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Category"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+          FRESH_ORDER.map(key => /*#__PURE__*/React.createElement("button", {
+            key: key,
+            onClick: () => setFreshCategory(key),
+            style: {
+              padding: "6px 10px",
+              background: freshCategory === key ? CATEGORIES[key].color : "#f0f0f0",
+              color: freshCategory === key ? "#fff" : "#555",
+              border: freshCategory === key ? "2px solid " + CATEGORIES[key].color : "2px solid #e0e0e0",
+              borderRadius: 4, fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "system-ui, sans-serif"
+            }
+          }, CATEGORIES[key].label))
+        )
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
+          [0,1,2,3].map(i => /*#__PURE__*/React.createElement("button", {
+            key: i,
+            onClick: () => setEditIdxFresh(i),
+            style: {
+              flex: 1, padding: "8px 0", cursor: "pointer", position: "relative",
+              background: editIdxFresh === i ? Y : "#f0f0f0",
+              color: editIdxFresh === i ? K : "#555",
+              border: "2px solid #e0e0e0",
+              borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+              fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+            }
+          }, "Card ", i + 1, cardsFresh[i] && cardsFresh[i].productName && /*#__PURE__*/React.createElement("span", {
+            style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxFresh === i ? K : "#4caf50", display: "inline-block" }
+          })))
+        )
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Product Name *"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. Diced Lamb Shoulder", value: cardF.productName, onChange: e => setF("productName", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Variety / Cut ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: freshCategory === 'fruit-veg' ? "e.g. Gala apples" : "e.g. Shoulder, diced", value: cardF.variety, onChange: e => setF("variety", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Origin ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. British, Spain, Halal certified", value: cardF.origin, onChange: e => setF("origin", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Unit ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. per kg, each, 500g pack", value: cardF.unit, onChange: e => setF("unit", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Price *"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. £8.99", value: cardF.nowPrice, onChange: e => setF("nowPrice", e.target.value), onBlur: e => setF("nowPrice", formatPrice(e.target.value)) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Was Price ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. £9.99 (shown crossed-out)", value: cardF.wasPrice, onChange: e => setF("wasPrice", e.target.value), onBlur: e => setF("wasPrice", formatPrice(e.target.value)) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
+        editIdxFresh < 3
+          ? /*#__PURE__*/React.createElement("button", {
+              onClick: () => setEditIdxFresh(editIdxFresh + 1),
+              style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" }
+            }, "Next Card →")
+          : /*#__PURE__*/React.createElement(React.Fragment, null,
+              /*#__PURE__*/React.createElement("button", {
+                onClick: () => addToQueue('working'),
+                disabled: !canAddFresh,
+                style: { flex: 1, background: canAddFresh ? "#333" : "#ddd", color: W, border: "none", padding: "12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddFresh ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" }
+              }, "Draft"),
+              /*#__PURE__*/React.createElement("button", {
+                onClick: () => addToQueue('ready', true),
+                disabled: !canAddFresh,
+                style: { flex: 1, background: canAddFresh ? Y : "#ddd", color: canAddFresh ? K : "#aaa", border: "none", padding: "14px", fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canAddFresh ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" }
+              }, "⎙ Export Now")
+            )
+      )
+    ),
+    /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
+        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 111×74mm · 4 per sheet"),
+      /*#__PURE__*/React.createElement("div", {
+        style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
+      }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, category: freshCategory, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
+    )
+  )))));
 }
     const domRoot = ReactDOM.createRoot(document.getElementById('root'));
     domRoot.render(React.createElement(App));
