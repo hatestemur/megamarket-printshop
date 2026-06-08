@@ -232,7 +232,7 @@ function brandMarkSVG(x, y, h, fg, bg) {
     ' L' + (x+w) + ',' + (y+h*0.6) +
     ' L' + (x+w) + ',' + (y+h) +
     ' L' + x + ',' + (y+h) + ' Z" fill="' + (bg||'#FEDE00') + '"/>' +
-    '<text x="' + (x+w/2) + '" y="' + (y+h*0.78) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="900" font-size="' + Math.round(h*0.72) + '" fill="' + (fg||'#000') + '" letter-spacing="-0.5">m.</text>'
+    '<text x="' + (x+w/2) + '" y="' + (y+h*0.78) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + Math.round(h*0.72) + '" fill="' + (fg||'#000') + '" letter-spacing="-0.5">m.</text>'
   );
 }
 
@@ -247,16 +247,19 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const cx = xS + FW / 2;
   const bannerH = 24;  // 12mm
 
-  // Banner: solid colour + organic dark blobs (scaled to card width)
+  // Banner: solid colour + organic dark blobs.
+  // The blob bank is authored for a 320×30 canvas; scale it to the
+  // actual banner size, translated to (xS, yo). Blobs stay within
+  // the banner's y-range (max y ≈ 28 × 0.8 = 22.4), so no clip needed.
   const blobScale = FW / 320;
+  const blobScaleY = bannerH / 30;
   const blobsSVG = BANNER_BLOBS.map(d =>
     '<path d="' + d + '" fill="' + cat.darkColor + '"/>'
   ).join('');
   const banner =
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
-    '<g transform="translate(' + xS + ',' + yo + ') scale(' + blobScale.toFixed(4) + ',' + (bannerH/30).toFixed(4) + ')" clip-path="url(#bclip-' + ci + ')">' +
+    '<g transform="translate(' + xS + ' ' + yo + ') scale(' + blobScale.toFixed(4) + ' ' + blobScaleY.toFixed(4) + ')">' +
     blobsSVG + '</g>';
-  const clip = '<clipPath id="bclip-' + ci + '"><rect x="0" y="0" width="' + (320) + '" height="30"/></clipPath>';
 
   // Product name (item line) - ALL CAPS, bold, centered below banner
   const item = (card.productName || '').toUpperCase();
@@ -264,27 +267,26 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const nameStartY = yo + bannerH + 30;
   const nameFS = 22;
   const nameLH = 26;
-  const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
-  const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
+  const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
+  const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
 
   // Price section: multibuy hero (if set) + each subtitle, OR each as hero
-  const hasMulti = !!(card.multibuyPrice && card.multibuyPrice.trim());
-  const hasNow = !!(card.nowPrice && card.nowPrice.trim());
+  const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
+  const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
   const heroFS = 48, subFS = 18;
-  const heroText = hasMulti ? card.multibuyPrice.toUpperCase() : (card.nowPrice || '').toUpperCase();
+  const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : String(card.nowPrice || '').toUpperCase();
   const heroY = yo + FH - 36;
-  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
-  const subSVG = (hasMulti && hasNow) ? '<text x="' + cx + '" y="' + (heroY + 22) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(card.nowPrice.toUpperCase() + ' EACH') + '</text>' : '';
+  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
+  const subSVG = (hasMulti && hasNow) ? '<text x="' + cx + '" y="' + (heroY + 22) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(String(card.nowPrice).toUpperCase() + ' EACH') + '</text>' : '';
 
   // "m." brand mark, bottom-right corner of card
   const markH = 18;
-  const markX = xS + FW - 28;
+  const markX = xS + FW - 32;
   const markY = yo + FH - markH - 8;
   const mark = brandMarkSVG(markX, markY, markH);
 
   return (
-    '<defs>' + clip + '</defs>' +
-    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="white"/>' +
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
     banner + itemSVG + varietySVG + heroSVG + subSVG + mark
   );
 }
