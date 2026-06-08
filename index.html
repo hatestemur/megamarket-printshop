@@ -1119,7 +1119,7 @@ function App() {
       setQueue(q => q.filter(i => !(i.type === "a4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
 
-    } else if (liveTemplate === 'fresh') {
+    } else if (activeTemplate === 'fresh') {
       // ── Fresh (Fruit & Veg / Butcher) export ──
       const allFresh = liveQueue.filter(q => q.type === 'fresh' && q.status === 'ready').map(q => q.data);
       const sheets = allFresh.length ? allFresh
