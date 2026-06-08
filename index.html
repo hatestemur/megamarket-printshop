@@ -190,90 +190,132 @@ const EMPTY = {
 
 /* ─── Fresh-section categories (Fruit & Veg, butcher cuts) ── */
 const CATEGORIES = {
-  'fruit-veg': { label: 'Fruit & Veg', color: '#22a45d',
-    pattern: '<path d="M4,10 Q4,3 10,3 Q16,3 16,10 Q16,17 10,17 Q4,17 4,10 Z" fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.75"/><path d="M10,3 L10,17" stroke="#ffffff" stroke-width="0.8" opacity="0.75"/>' },
-  'chicken':   { label: 'Chicken',     color: '#e8a23a',
-    pattern: '<path d="M2,12 Q6,4 10,12 T18,12" stroke="#ffffff" stroke-width="1.4" fill="none" opacity="0.85" stroke-linecap="round"/>' },
-  'beef':      { label: 'Beef',        color: '#b62a2a',
-    pattern: '<path d="M0,8 C4,4 8,12 12,8 S20,4 24,8" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.75"/><path d="M0,14 C4,10 8,18 12,14 S20,10 24,14" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.75"/>' },
-  'lamb':      { label: 'Lamb',        color: '#d670a6',
-    pattern: '<circle cx="5" cy="5" r="2.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.85"/><circle cx="14" cy="5" r="1.5" fill="#ffffff" opacity="0.7"/><circle cx="5" cy="14" r="1.5" fill="#ffffff" opacity="0.7"/>' },
-  'rabbit':    { label: 'Rabbit',      color: '#8c6e4e',
-    pattern: '<ellipse cx="10" cy="6" rx="3" ry="2" fill="#ffffff" opacity="0.85"/><ellipse cx="6" cy="11" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/><ellipse cx="14" cy="11" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/><ellipse cx="10" cy="14" rx="1.5" ry="1.5" fill="#ffffff" opacity="0.75"/>' },
-  'duck':      { label: 'Duck',        color: '#2d6584',
-    pattern: '<path d="M2,10 Q6,6 10,10 Q14,14 18,10" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.85"/><path d="M2,16 Q6,12 10,16 Q14,20 18,16" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.65"/>' },
-  'turkey':    { label: 'Turkey',      color: '#c8632b',
-    pattern: '<g stroke="#ffffff" stroke-width="0.9" fill="none" opacity="0.8" stroke-linecap="round"><line x1="10" y1="18" x2="3" y2="6"/><line x1="10" y1="18" x2="7" y2="3"/><line x1="10" y1="18" x2="10" y2="2"/><line x1="10" y1="18" x2="13" y2="3"/><line x1="10" y1="18" x2="17" y2="6"/></g>' },
-  'fish':      { label: 'Fish',        color: '#1e8aa9',
-    pattern: '<path d="M0,12 A4,4 0 0,1 8,12 M8,12 A4,4 0 0,1 16,12 M-4,18 A4,4 0 0,1 4,18 M4,18 A4,4 0 0,1 12,18 M12,18 A4,4 0 0,1 20,18" stroke="#ffffff" stroke-width="1" fill="none" opacity="0.85"/>' }
+  'fruit-veg': { label: 'Fruit & Veg', color: '#27a554', darkColor: '#0a5f29' },
+  'chicken':   { label: 'Chicken',     color: '#f4b942', darkColor: '#a87014' },
+  'beef':      { label: 'Beef',        color: '#c8302e', darkColor: '#7a1311' },
+  'lamb':      { label: 'Lamb',        color: '#e08bb8', darkColor: '#883460' },
+  'rabbit':    { label: 'Rabbit',      color: '#a8845c', darkColor: '#5c4327' },
+  'duck':      { label: 'Duck',        color: '#3a7b9f', darkColor: '#173d54' },
+  'turkey':    { label: 'Turkey',      color: '#d97031', darkColor: '#7a3712' },
+  'fish':      { label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', origin:'', unit:'', nowPrice:'', wasPrice:'' };
+const EMPTY_FRESH = { productName:'', variety:'', nowPrice:'', multibuyPrice:'' };
 
-/* ─── Build SVG markup for ONE Fresh card at vertical offset yo ── */
-function freshCardSVG(card, cat, ci, FW, FH, xS) {
-  const bannerH = 30;
-  const yo = ci * FH;
-  const _ctx = (typeof document !== 'undefined') ? (window._mmMeasureCtx || (window._mmMeasureCtx = document.createElement('canvas').getContext('2d'))) : null;
-  const wrap = (text, maxW, fs, weight) => {
-    if (!_ctx) return [text||''];
-    _ctx.font = (weight||'500') + ' ' + fs + 'px MadaniArabic, sans-serif';
-    const words = (text || '').split(' ');
-    const lines = []; let cur = '';
-    for (const w of words) {
-      const test = cur ? cur + ' ' + w : w;
-      if (_ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; } else cur = test;
-    }
-    if (cur) lines.push(cur);
-    return lines.slice(0, 2); // max 2 lines for product name
-  };
-  const nameLines = wrap(card.productName || '', FW - 20, 19, '600');
-  const nameStartY = yo + bannerH + 22;
-  const nameLH = 22;
-  const nameSVG = nameLines.map((line, i) =>
-    '<text x="' + (xS + 10) + '" y="' + (nameStartY + i * nameLH) + '" fill="#000" font-family="MadaniArabic" font-weight="600" font-size="19" letter-spacing="-0.3">' + escSVG(line) + '</text>'
-  ).join('');
-  const varietyY = nameStartY + (nameLines.length - 1) * nameLH + 15;
-  const variety = card.variety ? '<text x="' + (xS + 10) + '" y="' + varietyY + '" fill="#666" font-family="MadaniArabic" font-style="italic" font-size="12">' + escSVG(card.variety) + '</text>' : '';
-  const origin = card.origin ? '<text x="' + (xS + 10) + '" y="' + (yo + FH - 10) + '" fill="#666" font-family="MadaniArabic" font-weight="500" font-size="11">' + escSVG(card.origin) + '</text>' : '';
-  const wasLine = card.wasPrice ? '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 56) + '" text-anchor="end" fill="#999" font-family="MadaniArabic" font-weight="500" font-size="13" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
-  const nowLine = '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 24) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="800" font-size="32" letter-spacing="-1">' + escSVG(card.nowPrice || '') + '</text>';
-  const unitLine = card.unit ? '<text x="' + (xS + FW - 10) + '" y="' + (yo + FH - 10) + '" text-anchor="end" fill="#666" font-family="MadaniArabic" font-weight="500" font-size="11">' + escSVG(card.unit) + '</text>' : '';
-  const labelLetters = (cat.label || '').toUpperCase();
-  const labelFS = labelLetters.length > 10 ? 14 : 17;
+/* ─── Hand-placed organic blob shapes for the textured banner ──
+   Coords assume banner is 320 wide × 30 tall (SVG units). Each path
+   is positioned absolutely so the spread looks deliberate not tiled. */
+const BANNER_BLOBS = [
+  'M2,4 C12,1 24,3 30,9 C34,17 22,24 13,21 C3,17 -4,9 2,4 Z',
+  'M34,8 C44,4 56,6 60,13 C58,20 47,23 39,19 C30,14 28,10 34,8 Z',
+  'M64,3 C74,1 86,4 90,11 C88,18 76,22 68,17 C58,12 56,5 64,3 Z',
+  'M96,9 C106,5 118,7 122,14 C120,21 109,24 100,20 C90,15 88,12 96,9 Z',
+  'M126,4 C136,1 148,4 152,11 C150,18 138,22 130,17 C120,12 118,7 126,4 Z',
+  'M156,9 C166,5 178,7 182,14 C180,21 168,24 160,20 C150,15 148,12 156,9 Z',
+  'M188,3 C198,1 210,4 214,11 C212,18 200,22 192,17 C182,12 180,6 188,3 Z',
+  'M218,8 C228,4 240,6 244,13 C242,20 230,23 222,19 C212,14 210,11 218,8 Z',
+  'M250,4 C260,1 272,4 276,11 C274,18 262,22 254,17 C244,12 242,7 250,4 Z',
+  'M280,9 C290,5 302,7 306,14 C304,21 292,24 284,20 C274,15 272,12 280,9 Z',
+  'M16,15 C24,12 34,15 38,21 C36,26 25,28 17,25 C9,22 8,18 16,15 Z',
+  'M72,16 C82,13 92,15 95,21 C92,26 82,28 74,25 C66,22 64,18 72,16 Z',
+  'M138,15 C148,12 158,15 161,21 C158,26 148,28 140,25 C132,22 130,18 138,15 Z',
+  'M204,16 C214,13 224,15 227,21 C224,26 214,28 206,25 C198,22 196,18 204,16 Z',
+  'M270,15 C280,12 290,15 293,21 C290,26 280,28 272,25 C264,22 262,18 270,15 Z'
+];
+
+/* ─── m. brand-mark SVG (small, for bottom-right of each card) ── */
+function brandMarkSVG(x, y, h, fg, bg) {
+  // Yellow rounded tab with black "m." inside. h ≈ 16 units.
+  const w = Math.round(h * 1.15);
   return (
-    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="white"/>' +
-    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
-    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="url(#pat-' + Object.keys(CATEGORIES).find(k => CATEGORIES[k] === cat) + ')"/>' +
-    '<text x="' + (xS + FW / 2) + '" y="' + (yo + bannerH / 2 + labelFS * 0.35) + '" text-anchor="middle" fill="#ffffff" font-family="MadaniArabic" font-weight="900" font-size="' + labelFS + '" letter-spacing="3">' + escSVG(labelLetters) + '</text>' +
-    nameSVG + variety + origin + wasLine + nowLine + unitLine +
-    (ci < 3 ? '<line x1="' + xS + '" y1="' + (yo + FH) + '" x2="420" y2="' + (yo + FH) + '" stroke="#ddd" stroke-width="0.5" stroke-dasharray="4,3"/>' : '')
+    '<path d="M' + x + ',' + y + ' L' + (x+w-h*0.18) + ',' + y +
+    ' L' + (x+w) + ',' + (y+h*0.6) +
+    ' L' + (x+w) + ',' + (y+h) +
+    ' L' + x + ',' + (y+h) + ' Z" fill="' + (bg||'#FEDE00') + '"/>' +
+    '<text x="' + (x+w/2) + '" y="' + (y+h*0.78) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="900" font-size="' + Math.round(h*0.72) + '" fill="' + (fg||'#000') + '" letter-spacing="-0.5">m.</text>'
   );
 }
 
-/* ─── React component: render full Fresh sheet (4 cards) ─── */
+/* ─── Build SVG markup for ONE Fresh card at vertical offset yo ──
+   Layout (matching reference design):
+     • Top banner with category-coloured texture (organic blobs)
+     • Centered product name + variety on two lines below banner
+     • Multibuy price (hero) with each-price (subtitle) — or each-price as hero
+     • Yellow "m." brand mark in bottom-right corner */
+function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
+  const yo = (yOffset != null) ? yOffset : ci * FH;
+  const cx = xS + FW / 2;
+  const bannerH = 24;  // 12mm
+
+  // Banner: solid colour + organic dark blobs (scaled to card width)
+  const blobScale = FW / 320;
+  const blobsSVG = BANNER_BLOBS.map(d =>
+    '<path d="' + d + '" fill="' + cat.darkColor + '"/>'
+  ).join('');
+  const banner =
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" fill="' + cat.color + '"/>' +
+    '<g transform="translate(' + xS + ',' + yo + ') scale(' + blobScale.toFixed(4) + ',' + (bannerH/30).toFixed(4) + ')" clip-path="url(#bclip-' + ci + ')">' +
+    blobsSVG + '</g>';
+  const clip = '<clipPath id="bclip-' + ci + '"><rect x="0" y="0" width="' + (320) + '" height="30"/></clipPath>';
+
+  // Product name (item line) - ALL CAPS, bold, centered below banner
+  const item = (card.productName || '').toUpperCase();
+  const variety = (card.variety || '').toUpperCase();
+  const nameStartY = yo + bannerH + 30;
+  const nameFS = 22;
+  const nameLH = 26;
+  const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
+  const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
+
+  // Price section: multibuy hero (if set) + each subtitle, OR each as hero
+  const hasMulti = !!(card.multibuyPrice && card.multibuyPrice.trim());
+  const hasNow = !!(card.nowPrice && card.nowPrice.trim());
+  const heroFS = 48, subFS = 18;
+  const heroText = hasMulti ? card.multibuyPrice.toUpperCase() : (card.nowPrice || '').toUpperCase();
+  const heroY = yo + FH - 36;
+  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
+  const subSVG = (hasMulti && hasNow) ? '<text x="' + cx + '" y="' + (heroY + 22) + '" text-anchor="middle" font-family="MadaniArabic" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(card.nowPrice.toUpperCase() + ' EACH') + '</text>' : '';
+
+  // "m." brand mark, bottom-right corner of card
+  const markH = 18;
+  const markX = xS + FW - 28;
+  const markY = yo + FH - markH - 8;
+  const mark = brandMarkSVG(markX, markY, markH);
+
+  return (
+    '<defs>' + clip + '</defs>' +
+    '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="white"/>' +
+    banner + itemSVG + varietySVG + heroSVG + subSVG + mark
+  );
+}
+
+/* ─── Sheet geometry constants: 3 cards per A4 portrait ─── */
+const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 170, xS: 50, yTop: 22, gap: 12 };
+
+/* ─── React component: render full Fresh sheet (3 cards) ─── */
 function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
-  const FW = 222, FH = 148, CW = 420, CH = FH * 4;
-  const xS = CW - FW;
+  const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
   const cat = CATEGORIES[category] || CATEGORIES['fruit-veg'];
-  const svgInner = cards.map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS)).join('');
-  const defs = '<defs><pattern id="pat-' + category + '" patternUnits="userSpaceOnUse" width="20" height="20">' + cat.pattern + '</pattern></defs>';
-  const fullSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" style="display:block">' +
-    defs +
-    '<rect width="' + xS + '" height="' + CH + '" fill="#f0f0f0"/>' +
-    '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#aaa" stroke-width="0.8" stroke-dasharray="5,3"/>' +
+  const positions = [yTop, yTop + FH + gap, yTop + 2 * (FH + gap)];
+  const svgInner = cards.slice(0, 3).map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS, positions[i])).join('');
+  const fullSVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" style="display:block;background:#fff">' +
+    '<rect width="' + CW + '" height="' + CH + '" fill="#fff"/>' +
+    // Cut-guide dashed lines down the card edges
+    '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
+    '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
     svgInner + '</svg>';
   return React.createElement('div', { style: { position:'relative', width: fit?'100%':CW, height: fit?'100%':CH } },
     React.createElement('div', { style: { width:'100%', height:'100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
-    onSelect && [0,1,2,3].map(i => React.createElement('div', {
+    onSelect && [0,1,2].map(i => React.createElement('div', {
       key: i,
       onClick: () => onSelect(i),
       style: {
         position:'absolute',
-        left: (xS/CW*100)+'%',
-        top: (i*FH/CH*100)+'%',
-        width: (FW/CW*100)+'%',
-        height: (FH/CH*100)+'%',
+        left: (xS/CW*100) + '%',
+        top: (positions[i]/CH*100) + '%',
+        width: (FW/CW*100) + '%',
+        height: (FH/CH*100) + '%',
         cursor:'pointer',
         outline: editIdx===i ? '3px solid #FEDE00' : '3px solid transparent',
         boxSizing:'border-box'
@@ -745,9 +787,13 @@ function App() {
   const [cardsFresh, setCardsFresh] = useState(() => {
     try {
       const s = localStorage.getItem('megamarket_cards_fresh');
-      if (s) return JSON.parse(s);
+      if (s) {
+        const parsed = JSON.parse(s);
+        // Normalise to 3 cards (truncate or pad)
+        return [0,1,2].map(i => parsed[i] ? { ...EMPTY_FRESH, ...parsed[i] } : { ...EMPTY_FRESH });
+      }
     } catch (e) {}
-    return [0,1,2,3].map(() => ({ ...EMPTY_FRESH }));
+    return [0,1,2].map(() => ({ ...EMPTY_FRESH }));
   });
   const [editIdxFresh, setEditIdxFresh] = useState(0);
   const [freshCategory, setFreshCategory] = useState(() => {
@@ -809,7 +855,7 @@ function App() {
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       };
       setQueue(q => [item, ...q]);
-      setCardsFresh([0,1,2,3].map(() => ({ ...EMPTY_FRESH })));
+      setCardsFresh([0,1,2].map(() => ({ ...EMPTY_FRESH })));
       setEditIdxFresh(0);
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
@@ -861,7 +907,8 @@ function App() {
     } else if (item.type === 'fresh') {
       const d = item.data || {};
       setFreshCategory(d.category || 'fruit-veg');
-      setCardsFresh((d.cards || [0,1,2,3].map(() => ({ ...EMPTY_FRESH }))).map(c => ({ ...EMPTY_FRESH, ...c })));
+      const src = d.cards || [];
+      setCardsFresh([0,1,2].map(i => src[i] ? { ...EMPTY_FRESH, ...src[i] } : { ...EMPTY_FRESH }));
       setEditIdxFresh(0);
     } else {
       setCards8x4(item.data);
@@ -1060,16 +1107,16 @@ function App() {
       const sheets = allFresh.length ? allFresh
         : (canAddFresh ? [{ category: freshCategory, cards: cardsFresh }] : []);
       if (!sheets.length) { showToast('Nothing to export'); return; }
-      const FW = 222, FH = 148, CW = 420, CH = FH * 4, xS = CW - FW;
+      const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
+      const positions = [yTop, yTop + FH + gap, yTop + 2 * (FH + gap)];
       const pages = sheets.map(sheet => {
         const cat = CATEGORIES[sheet.category] || CATEGORIES['fruit-veg'];
-        const patternId = 'pat-' + (sheet.category || 'fruit-veg');
-        const svgRows = sheet.cards.map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS)).join('');
+        const svgRows = sheet.cards.slice(0, 3).map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci])).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
-          '<defs><style>' + fontStyle + '</style>' +
-          '<pattern id="' + patternId + '" patternUnits="userSpaceOnUse" width="20" height="20">' + cat.pattern + '</pattern></defs>' +
-          '<rect width="' + xS + '" height="' + CH + '" fill="white"/>' +
-          '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
+          '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
+          '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
           svgRows + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
@@ -2327,7 +2374,7 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
-          [0,1,2,3].map(i => /*#__PURE__*/React.createElement("button", {
+          [0,1,2].map(i => /*#__PURE__*/React.createElement("button", {
             key: i,
             onClick: () => setEditIdxFresh(i),
             style: {
@@ -2335,9 +2382,9 @@ function App() {
               background: editIdxFresh === i ? Y : "#f0f0f0",
               color: editIdxFresh === i ? K : "#555",
               border: "2px solid #e0e0e0",
-              borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+              borderRight: i < 2 ? "none" : "2px solid #e0e0e0",
               fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
-              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0"
             }
           }, "Card ", i + 1, cardsFresh[i] && cardsFresh[i].productName && /*#__PURE__*/React.createElement("span", {
             style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxFresh === i ? K : "#4caf50", display: "inline-block" }
@@ -2345,31 +2392,23 @@ function App() {
         )
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Product Name *"),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. Diced Lamb Shoulder", value: cardF.productName, onChange: e => setF("productName", e.target.value) })
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Item *"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: freshCategory === 'fruit-veg' ? "e.g. APPLE" : "e.g. LAMB", value: cardF.productName, onChange: e => setF("productName", e.target.value) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Variety / Cut ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: freshCategory === 'fruit-veg' ? "e.g. Gala apples" : "e.g. Shoulder, diced", value: cardF.variety, onChange: e => setF("variety", e.target.value) })
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: freshCategory === 'fruit-veg' ? "e.g. ROYAL GALA" : "e.g. DICED SHOULDER", value: cardF.variety, onChange: e => setF("variety", e.target.value) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Origin ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. British, Spain, Halal certified", value: cardF.origin, onChange: e => setF("origin", e.target.value) })
-      ),
-      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Unit ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. per kg, each, 500g pack", value: cardF.unit, onChange: e => setF("unit", e.target.value) })
-      ),
-      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Price *"),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. £8.99", value: cardF.nowPrice, onChange: e => setF("nowPrice", e.target.value), onBlur: e => setF("nowPrice", formatPrice(e.target.value)) })
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Single Price *"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 99p or £1.49", value: cardF.nowPrice, onChange: e => setF("nowPrice", e.target.value), onBlur: e => setF("nowPrice", formatPrice(e.target.value)) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Was Price ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
-        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. £9.99 (shown crossed-out)", value: cardF.wasPrice, onChange: e => setF("wasPrice", e.target.value), onBlur: e => setF("wasPrice", formatPrice(e.target.value)) })
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Multibuy Deal ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional — becomes the hero)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 FOR £1.75", value: cardF.multibuyPrice, onChange: e => setF("multibuyPrice", e.target.value) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
-        editIdxFresh < 3
+        editIdxFresh < 2
           ? /*#__PURE__*/React.createElement("button", {
               onClick: () => setEditIdxFresh(editIdxFresh + 1),
               style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" }
@@ -2390,7 +2429,7 @@ function App() {
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
-        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 111×74mm · 4 per sheet"),
+        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×85mm · 3 per sheet"),
       /*#__PURE__*/React.createElement("div", {
         style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
       }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, category: freshCategory, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
