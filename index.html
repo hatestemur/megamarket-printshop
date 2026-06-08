@@ -1211,7 +1211,7 @@ function App() {
       setQueue(q => q.filter(i => !(i.type === "8x4" && i.status === "ready")));
       showToast("PDF downloaded ✓");
     }
-    } catch(e) { console.error("Export failed:", e); showToast("Export failed — check console for details"); } finally { isExportingRef.current = false; }
+    } catch(e) { console.error("Export failed:", e); showToast("Export failed: " + (e && (e.message || e.name) || String(e)).slice(0, 120)); } finally { isExportingRef.current = false; }
   };
   const exportTextPDF = async (forceTemplate, passedQueue) => {
     if (isExportingRef.current) { showToast("Export already in progress…"); return; }
