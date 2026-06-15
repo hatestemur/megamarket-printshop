@@ -627,7 +627,7 @@ function PriceCard({
     }));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: sideW + 18,
-    y: 313,
+    y: 293,
     width: CW - sideW - 36,
     height: 44
   }, /*#__PURE__*/React.createElement("div", {
@@ -648,7 +648,7 @@ function PriceCard({
   })) : null, card.nowPrice
     ? /*#__PURE__*/React.createElement("text", {
         x: CW - 18,
-        y: 443,
+        y: 423,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
@@ -658,7 +658,7 @@ function PriceCard({
       }, ...pricesToReactChildren(card.nowPrice, 88))
     : /*#__PURE__*/React.createElement("text", {
         x: CW - 18,
-        y: 443,
+        y: 423,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
@@ -667,7 +667,7 @@ function PriceCard({
         letterSpacing: "-1"
       }, /*#__PURE__*/React.createElement("tspan", { fill: "#ddd" }, "0.00")), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
     x: CW - 18,
-    y: 490,
+    y: 470,
     textAnchor: "end",
     fill: "#000",
     fontFamily: FONT,
@@ -1255,9 +1255,9 @@ function App() {
             return '<text x="' + (CW-18) + '" y="' + (startY+ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + pricesToTspans(tier, fs) + '</text>' + (each ? '<text x="' + (CW-18) + '" y="' + (startY+ys[i]+Math.round(lastFs*0.28)+18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + pricesToTspans(each, 17) + '</text>' : '');
           }).join('');
         }
-        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + pricesToTspans(card.wasPrice, 30) + '</text>' : '';
-        const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 88) + '</text>';
-        const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="490" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + pricesToTspans(card.unitPrice, 17) + '</text>' : '';
+        const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-18) + '" y="328" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + pricesToTspans(card.wasPrice, 30) + '</text>' : '';
+        const nowLine = '<text x="' + (CW-18) + '" y="423" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 88) + '</text>';
+        const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="470" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + pricesToTspans(card.unitPrice, 17) + '</text>' : '';
         return wasLine + nowLine + unitLine;
       };
 
@@ -1484,9 +1484,9 @@ function App() {
             return '<text x="' + (CW-18) + '" y="' + (startY+ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.5">' + pricesToTspans(tier, fs) + '</text>' + (each ? '<text x="' + (CW-18) + '" y="' + (startY+ys[i]+Math.round(lastFs*0.28)+18) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="17">' + pricesToTspans(each, 17) + '</text>' : '');
           }).join('');
         } else {
-          const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-18) + '" y="348" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + pricesToTspans(card.wasPrice, 30) + '</text>' : '';
-          const nowLine = '<text x="' + (CW-18) + '" y="443" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 88) + '</text>';
-          const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="490" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + pricesToTspans(card.unitPrice, 17) + '</text>' : '';
+          const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-18) + '" y="328" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="30" text-decoration="line-through">' + pricesToTspans(card.wasPrice, 30) + '</text>' : '';
+          const nowLine = '<text x="' + (CW-18) + '" y="423" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="88" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 88) + '</text>';
+          const unitLine = card.unitPrice ? '<text x="' + (CW-18) + '" y="470" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="17">' + pricesToTspans(card.unitPrice, 17) + '</text>' : '';
           priceText = wasLine + nowLine + unitLine;
         }
         const validText = card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
