@@ -439,7 +439,7 @@ function FreshSheet({ cards, editIdx, onSelect, fit }) {
   }).join('');
   // Single horizontal cut-guides between cards — extended full sheet width
   // so the cut path is continuous edge-to-edge.
-  const hCuts = [1, 2, 3].map(i =>
+  const hCuts = [0, 1, 2, 3, 4].map(i =>
     '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
   ).join('');
   const wH = fit ? '100%' : CW;
@@ -1274,7 +1274,7 @@ function App() {
       }
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
       const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
-      const hCuts = [1, 2, 3].map(i =>
+      const hCuts = [0, 1, 2, 3, 4].map(i =>
         '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
       ).join('');
       const pages = sheets.map(sheet => {
