@@ -246,7 +246,7 @@ function brandMarkSVG(x, y, h, fg, bg) {
 function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const yo = (yOffset != null) ? yOffset : ci * FH;
   const cx = xS + FW / 2;
-  const bannerH = 40;  // 20mm — matches reference proportions
+  const bannerH = 32;  // 16mm — tighter for 4-per-A4
 
   // Banner: prefer a real texture when one is loaded for this category,
   // else fall back to procedural blobs. Nested <svg> uses preserveAspectRatio
@@ -280,25 +280,26 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // Product name (item line) - ALL CAPS, bold, centered below banner
   const item = (card.productName || '').toUpperCase();
   const variety = (card.variety || '').toUpperCase();
-  const nameStartY = yo + bannerH + 30;
-  const nameFS = 22;
-  const nameLH = 26;
+  const nameStartY = yo + bannerH + 22;
+  const nameFS = 19;
+  const nameLH = 21;
   const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
   const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
 
   // Price section: multibuy hero (if set) + each subtitle, OR each as hero
   const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
   const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
-  const heroFS = 48, subFS = 18;
+  const heroFS = 32, subFS = 12;
   const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : String(card.nowPrice || '').toUpperCase();
-  const heroY = yo + FH - 36;
-  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
-  const subSVG = (hasMulti && hasNow) ? '<text x="' + cx + '" y="' + (heroY + 22) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(String(card.nowPrice).toUpperCase() + ' EACH') + '</text>' : '';
+  const heroY = yo + FH - 28;
+  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.2">' + escSVG(heroText) + '</text>' : '';
+  // Sub-price aligned LEFT so it doesn't collide with the bottom-right brand mark
+  const subSVG = (hasMulti && hasNow) ? '<text x="' + (xS + 10) + '" y="' + (yo + FH - 10) + '" text-anchor="start" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(String(card.nowPrice).toUpperCase() + ' EACH') + '</text>' : '';
 
   // "m." brand mark, bottom-right corner of card
-  const markH = 18;
-  const markX = xS + FW - 32;
-  const markY = yo + FH - markH - 8;
+  const markH = 14;
+  const markX = xS + FW - 24;
+  const markY = yo + FH - markH - 4;
   const mark = brandMarkSVG(markX, markY, markH);
 
   return (
@@ -308,14 +309,14 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
 }
 
 /* ─── Sheet geometry constants: 3 cards per A4 portrait ─── */
-const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 170, xS: 50, yTop: 22, gap: 12 };
+const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 140, xS: 50, yTop: 12, gap: 6 };
 
 /* ─── React component: render full Fresh sheet (3 cards) ─── */
 function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
   const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
   const cat = CATEGORIES[category] || CATEGORIES['fruit-veg'];
-  const positions = [yTop, yTop + FH + gap, yTop + 2 * (FH + gap)];
-  const svgInner = cards.slice(0, 3).map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS, positions[i])).join('');
+  const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
+  const svgInner = cards.slice(0, 4).map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS, positions[i])).join('');
   const wH = fit ? '100%' : CW;
   const hH = fit ? '100%' : CH;
   const fullSVG =
@@ -327,7 +328,7 @@ function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
     svgInner + '</svg>';
   return React.createElement('div', { style: { position:'relative', width: fit?'100%':CW, height: fit?'100%':CH } },
     React.createElement('div', { style: { width:'100%', height:'100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
-    onSelect && [0,1,2].map(i => React.createElement('div', {
+    onSelect && [0,1,2,3].map(i => React.createElement('div', {
       key: i,
       onClick: () => onSelect(i),
       style: {
@@ -810,10 +811,10 @@ function App() {
       if (s) {
         const parsed = JSON.parse(s);
         // Normalise to 3 cards (truncate or pad)
-        return [0,1,2].map(i => parsed[i] ? { ...EMPTY_FRESH, ...parsed[i] } : { ...EMPTY_FRESH });
+        return [0,1,2,3].map(i => parsed[i] ? { ...EMPTY_FRESH, ...parsed[i] } : { ...EMPTY_FRESH });
       }
     } catch (e) {}
-    return [0,1,2].map(() => ({ ...EMPTY_FRESH }));
+    return [0,1,2,3].map(() => ({ ...EMPTY_FRESH }));
   });
   const [editIdxFresh, setEditIdxFresh] = useState(0);
   const [freshCategory, setFreshCategory] = useState(() => {
@@ -875,7 +876,7 @@ function App() {
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       };
       setQueue(q => [item, ...q]);
-      setCardsFresh([0,1,2].map(() => ({ ...EMPTY_FRESH })));
+      setCardsFresh([0,1,2,3].map(() => ({ ...EMPTY_FRESH })));
       setEditIdxFresh(0);
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
@@ -928,7 +929,7 @@ function App() {
       const d = item.data || {};
       setFreshCategory(d.category || 'fruit-veg');
       const src = d.cards || [];
-      setCardsFresh([0,1,2].map(i => src[i] ? { ...EMPTY_FRESH, ...src[i] } : { ...EMPTY_FRESH }));
+      setCardsFresh([0,1,2,3].map(i => src[i] ? { ...EMPTY_FRESH, ...src[i] } : { ...EMPTY_FRESH }));
       setEditIdxFresh(0);
     } else {
       setCards8x4(item.data);
@@ -1128,10 +1129,10 @@ function App() {
         : (canAddFresh ? [{ category: freshCategory, cards: cardsFresh }] : []);
       if (!sheets.length) { showToast('Nothing to export'); return; }
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
-      const positions = [yTop, yTop + FH + gap, yTop + 2 * (FH + gap)];
+      const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
       const pages = sheets.map(sheet => {
         const cat = CATEGORIES[sheet.category] || CATEGORIES['fruit-veg'];
-        const svgRows = sheet.cards.slice(0, 3).map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci])).join('');
+        const svgRows = sheet.cards.slice(0, 4).map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci])).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
@@ -2394,7 +2395,7 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
-          [0,1,2].map(i => /*#__PURE__*/React.createElement("button", {
+          [0,1,2,3].map(i => /*#__PURE__*/React.createElement("button", {
             key: i,
             onClick: () => setEditIdxFresh(i),
             style: {
@@ -2402,9 +2403,9 @@ function App() {
               background: editIdxFresh === i ? Y : "#f0f0f0",
               color: editIdxFresh === i ? K : "#555",
               border: "2px solid #e0e0e0",
-              borderRight: i < 2 ? "none" : "2px solid #e0e0e0",
+              borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
               fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
-              borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0"
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
             }
           }, "Card ", i + 1, cardsFresh[i] && cardsFresh[i].productName && /*#__PURE__*/React.createElement("span", {
             style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxFresh === i ? K : "#4caf50", display: "inline-block" }
@@ -2428,7 +2429,7 @@ function App() {
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 FOR £1.75", value: cardF.multibuyPrice, onChange: e => setF("multibuyPrice", e.target.value) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
-        editIdxFresh < 2
+        editIdxFresh < 3
           ? /*#__PURE__*/React.createElement("button", {
               onClick: () => setEditIdxFresh(editIdxFresh + 1),
               style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" }
@@ -2449,7 +2450,7 @@ function App() {
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
-        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×85mm · 3 per sheet"),
+        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×70mm · 4 per sheet"),
       /*#__PURE__*/React.createElement("div", {
         style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
       }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, category: freshCategory, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
