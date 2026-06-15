@@ -393,9 +393,10 @@ function FreshSheet({ cards, editIdx, onSelect, fit }) {
     const cat = CATEGORIES[card.category] || CATEGORIES['fruit-veg'];
     return freshCardSVG(card, cat, i, FW, FH, xS, positions[i]);
   }).join('');
-  // Single horizontal cut-guides between cards (cards touch, so one cut splits two)
+  // Single horizontal cut-guides between cards — extended full sheet width
+  // so the cut path is continuous edge-to-edge.
   const hCuts = [1, 2, 3].map(i =>
-    '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+    '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
   ).join('');
   const wH = fit ? '100%' : CW;
   const hH = fit ? '100%' : CH;
@@ -1230,7 +1231,7 @@ function App() {
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
       const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
       const hCuts = [1, 2, 3].map(i =>
-        '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+        '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
       ).join('');
       const pages = sheets.map(sheet => {
         // Per-card category; fall back to sheet.category (legacy queue items) then fruit-veg.
