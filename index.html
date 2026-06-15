@@ -388,7 +388,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const heroText = hasMulti ? ucPrice(card.multibuyPrice) : (hasNow ? ucPrice(card.nowPrice) : '');
   const subText = hasNow ? (hasMulti ? ucPrice(card.nowPrice) + ' ' + unitDisplay : unitDisplay) : '';
 
-  const nameFS = 16, heroFS = 40, subFS = 16;
+  const nameFS = 16, heroFS = 44, subFS = 16;
   // Switched off MadaniArabic for card text: it only ships 400 + 700 weights,
   // so every value between snapped to one of those two. The system sans-serif
   // chain (Helvetica Neue Light / SF Pro Light on Apple, Segoe / Roboto Light
