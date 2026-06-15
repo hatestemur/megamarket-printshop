@@ -290,7 +290,10 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const nameStartY = yo + bannerH + 20;
   const nameFS = 16;
   const nameLH = 18;
-  const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
+  // If only the item is set (no variety), drop it onto the variety row so the
+  // single headline sits halfway between the banner and the hero price.
+  const itemY = variety ? nameStartY : nameStartY + nameLH;
+  const itemSVG = item ? '<text x="' + cx + '" y="' + itemY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
   const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
 
   // Price section: hero dominates the lower half of the card
