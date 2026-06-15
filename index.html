@@ -273,7 +273,13 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // the SVG fails to parse as an Image.
   let banner;
   const tex = (typeof window !== 'undefined' && window.TEXTURE_DATA && cat.key) ? window.TEXTURE_DATA[cat.key] : null;
-  if (tex) {
+  if (tex && tex._png) {
+    // Fast path: the texture has been rasterised to a small JPEG at startup.
+    // 4 cards on a sheet inline 4 copies of this JPEG (≈80KB each, vs 5MB+ of
+    // raw SVG path data) so the export SVG stays small enough to load.
+    banner = '<image x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" preserveAspectRatio="xMidYMid slice" href="' + tex._png + '"/>';
+  } else if (tex) {
+    // Slow path used before the JPEG cache is ready (preview only).
     const idPrefix = 'tex' + cat.key + '_c' + ci + '_';
     const inner = tex.inner
       .replace(/id="([^"]+)"/g, 'id="' + idPrefix + '$1"')
@@ -814,6 +820,39 @@ const inp = {
   boxSizing: "border-box"
 };
 function App() {
+  // Pre-rasterize every category texture to a small JPEG dataURL once on mount.
+  // The inlined SVG path data is too large to ship in the export SVG when
+  // multiple cards share a category — the <img> SVG loader fails silently
+  // ("[object Event]"). A flat JPEG carries the same visual at a fraction of
+  // the byte cost. Stored back on TEXTURE_DATA[key]._png; freshCardSVG checks
+  // for it and falls back to inline SVG if it isn't ready yet.
+  const [texTick, bumpTex] = useState(0);
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.TEXTURE_DATA) return;
+    const targetW = 1600, targetH = 200;  // banner aspect ≈ 8:1
+    Object.keys(window.TEXTURE_DATA).forEach(key => {
+      const tex = window.TEXTURE_DATA[key];
+      if (tex._png || tex._loading) return;
+      tex._loading = true;
+      const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + targetW + '" height="' + targetH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' + tex.inner + '</svg>';
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, targetW, targetH);
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+        try { tex._png = canvas.toDataURL('image/jpeg', 0.85); }
+        catch (e) { console.error('texture cache failed for', key, e); }
+        URL.revokeObjectURL(url);
+        bumpTex(n => n + 1);
+      };
+      img.onerror = (e) => { console.error('texture load failed for', key, e); URL.revokeObjectURL(url); tex._loading = false; };
+      img.src = url;
+    });
+  }, []);
   const [form, setForm] = useState({
     ...EMPTY,
     productName: "Cypressa Extra Virgin Olive Oil",
