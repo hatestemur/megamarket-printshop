@@ -58,8 +58,11 @@ function escSVG(str) {
    Strings with no £X.YY pattern come back as plain escaped text. */
 function pricesToTspans(text, baseFontSize) {
   if (!text) return '';
-  const shift = Math.round(baseFontSize * 0.4);
+  // Tune shift so the pence glyph's TOP aligns with the pounds glyph's TOP.
+  // Math: pence_top = -shift - 0.78 × pence_fs ; pounds_top = -0.78 × base.
+  // Setting them equal gives shift = 0.78 × (base − pence_fs).
   const small = Math.round(baseFontSize * 0.6);
+  const shift = Math.round(0.78 * (baseFontSize - small));
   const parts = [];
   const rx = /£(\d+)\.(\d{2})/g;
   let lastEnd = 0, m;
