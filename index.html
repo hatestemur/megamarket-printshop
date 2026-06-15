@@ -254,6 +254,42 @@ function brandMarkSVG(x, y, h, fg, bg) {
   );
 }
 
+/* ─── Rasterize one texture SVG to a small JPEG dataURL ──
+   Cached on the texture object (._png) so subsequent calls return
+   immediately. Concurrent callers share the same in-flight Promise
+   via ._pendingPng. Returns null when TEXTURE_DATA isn't loaded or
+   the requested key doesn't exist. */
+function ensureTexturePNG(key) {
+  if (typeof window === 'undefined' || !window.TEXTURE_DATA) return Promise.resolve(null);
+  const tex = window.TEXTURE_DATA[key];
+  if (!tex) return Promise.resolve(null);
+  if (tex._png) return Promise.resolve(tex._png);
+  if (tex._pendingPng) return tex._pendingPng;
+  const targetW = 1600, targetH = 200;  // banner aspect ≈ 8:1, ~300dpi-ish
+  tex._pendingPng = new Promise((resolve, reject) => {
+    const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + targetW + '" height="' + targetH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' + tex.inner + '</svg>';
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const cleanup = () => URL.revokeObjectURL(url);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, targetW, targetH);
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+        tex._png = canvas.toDataURL('image/jpeg', 0.85);
+        cleanup();
+        resolve(tex._png);
+      } catch (e) { cleanup(); reject(e); }
+    };
+    img.onerror = () => { cleanup(); reject(new Error('Image load failed for texture "' + key + '"')); };
+    img.src = url;
+  });
+  return tex._pendingPng;
+}
+
 /* ─── Build SVG markup for ONE Fresh card at vertical offset yo ──
    Layout (matching reference design):
      • Top banner with category-coloured texture (organic blobs)
@@ -820,38 +856,12 @@ const inp = {
   boxSizing: "border-box"
 };
 function App() {
-  // Pre-rasterize every category texture to a small JPEG dataURL once on mount.
-  // The inlined SVG path data is too large to ship in the export SVG when
-  // multiple cards share a category — the <img> SVG loader fails silently
-  // ("[object Event]"). A flat JPEG carries the same visual at a fraction of
-  // the byte cost. Stored back on TEXTURE_DATA[key]._png; freshCardSVG checks
-  // for it and falls back to inline SVG if it isn't ready yet.
   const [texTick, bumpTex] = useState(0);
   React.useEffect(() => {
     if (typeof window === 'undefined' || !window.TEXTURE_DATA) return;
-    const targetW = 1600, targetH = 200;  // banner aspect ≈ 8:1
-    Object.keys(window.TEXTURE_DATA).forEach(key => {
-      const tex = window.TEXTURE_DATA[key];
-      if (tex._png || tex._loading) return;
-      tex._loading = true;
-      const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + targetW + '" height="' + targetH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' + tex.inner + '</svg>';
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = targetW; canvas.height = targetH;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, targetW, targetH);
-        ctx.drawImage(img, 0, 0, targetW, targetH);
-        try { tex._png = canvas.toDataURL('image/jpeg', 0.85); }
-        catch (e) { console.error('texture cache failed for', key, e); }
-        URL.revokeObjectURL(url);
-        bumpTex(n => n + 1);
-      };
-      img.onerror = (e) => { console.error('texture load failed for', key, e); URL.revokeObjectURL(url); tex._loading = false; };
-      img.src = url;
-    });
+    Object.keys(window.TEXTURE_DATA).forEach(k =>
+      ensureTexturePNG(k).then(() => bumpTex(n => n + 1)).catch(e => console.warn('[texture] startup rasterise failed:', k, e && e.message))
+    );
   }, []);
   const [form, setForm] = useState({
     ...EMPTY,
@@ -1203,6 +1213,20 @@ function App() {
       const sheets = allFresh.length ? allFresh
         : (canAddFresh ? [{ cards: cardsFresh }] : []);
       if (!sheets.length) { showToast('Nothing to export'); return; }
+      // Make sure every category used on these sheets has been rasterised to
+      // a JPEG before we build the export SVG. Without this, freshCardSVG
+      // falls back to inlining megabytes of SVG path data per card and the
+      // <img> loader for the assembled sheet silently dies ([object Event]).
+      const usedKeys = new Set();
+      sheets.forEach(sh => (sh.cards || []).forEach(c => usedKeys.add(c && c.category || sh.category || 'fruit-veg')));
+      const texResults = await Promise.all([...usedKeys].map(k => ensureTexturePNG(k).then(p => ({ k, ok: !!p })).catch(e => ({ k, ok: false, err: e }))));
+      const failedTex = texResults.filter(r => !r.ok);
+      if (failedTex.length) {
+        const msg = 'Texture failed: ' + failedTex.map(r => r.k + (r.err ? ' (' + (r.err.message || r.err.name) + ')' : '')).join(', ');
+        console.error(msg, failedTex);
+        showToast(msg.slice(0, 140));
+        return;
+      }
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
       const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
       const hCuts = [1, 2, 3].map(i =>
