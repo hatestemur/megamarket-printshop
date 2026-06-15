@@ -92,6 +92,33 @@ function pricesToTspans(text, baseFontSize) {
   }
   return out;
 }
+/* ─── React equivalent of pricesToTspans for live previews ──
+   Returns an array of children (strings and <tspan> elements) you can
+   spread into a React-built <text> element. Avoids dangerouslySetInnerHTML,
+   which is fiddly inside SVG (React 17/18 parse it as HTML and the
+   resulting <tspan> ends up in the wrong namespace, so the price renders
+   without superscript). */
+function pricesToReactChildren(text, baseFontSize) {
+  if (!text) return [];
+  const small = Math.round(baseFontSize * 0.6);
+  const shift = Math.round(0.78 * (baseFontSize - small));
+  const out = [];
+  const rx = /£(\d+)\.(\d{2})/g;
+  let lastEnd = 0, m, idx = 0;
+  while ((m = rx.exec(text)) !== null) {
+    if (m.index > lastEnd) out.push(text.slice(lastEnd, m.index));
+    out.push('£' + m[1] + '.');
+    out.push(React.createElement('tspan', { key: 'p' + (idx++), dy: -shift, fontSize: small }, m[2]));
+    lastEnd = rx.lastIndex;
+    if (lastEnd < text.length) {
+      // Reset the baseline so anything after the pence sits back on the line.
+      out.push(React.createElement('tspan', { key: 'r' + (idx++), dy: shift }, ''));
+    }
+  }
+  if (lastEnd < text.length) out.push(text.slice(lastEnd));
+  return out;
+}
+
 /* ─── Same superscript rule but as HTML (for foreignObject content) ── */
 function pricesToHTMLSup(text, baseFontSize) {
   if (!text) return '';
@@ -573,9 +600,8 @@ function PriceCard({
       fill: "#000",
       fontFamily: FONT,
       fontWeight: "400",
-      fontSize: "30",
-      dangerouslySetInnerHTML: { __html: pricesToTspans(card.nowPrice, 30) }
-    }), activeTiers.map((tier, i) => {
+      fontSize: "30"
+    }, ...pricesToReactChildren(card.nowPrice, 30)), activeTiers.map((tier, i) => {
       const each = parseTierEach(tier);
       const fs = i === n - 1 ? lastFs : smallFs;
       return /*#__PURE__*/React.createElement(React.Fragment, {
@@ -588,18 +614,16 @@ function PriceCard({
         fontFamily: FONT,
         fontWeight: "700",
         fontSize: fs,
-        letterSpacing: "-0.5",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(tier, fs) }
-      }), each && /*#__PURE__*/React.createElement("text", {
+        letterSpacing: "-0.5"
+      }, ...pricesToReactChildren(tier, fs)), each && /*#__PURE__*/React.createElement("text", {
         x: CW - 18,
         y: startY + ys[i] + Math.round(lastFs * 0.28) + 18,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
         fontWeight: "400",
-        fontSize: "17",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(each, 17) }
-      }));
+        fontSize: "17"
+      }, ...pricesToReactChildren(each, 17)));
     }));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("foreignObject", {
     x: sideW + 18,
@@ -630,9 +654,8 @@ function PriceCard({
         fontFamily: FONT,
         fontWeight: "700",
         fontSize: "88",
-        letterSpacing: "-1",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(card.nowPrice, 88) }
-      })
+        letterSpacing: "-1"
+      }, ...pricesToReactChildren(card.nowPrice, 88))
     : /*#__PURE__*/React.createElement("text", {
         x: CW - 18,
         y: 443,
@@ -650,9 +673,8 @@ function PriceCard({
     fontFamily: FONT,
     fontWeight: "400",
     fontSize: "17",
-    letterSpacing: "0.01em",
-    dangerouslySetInnerHTML: { __html: pricesToTspans(card.unitPrice, 17) }
-  }) : null), /*#__PURE__*/React.createElement("rect", {
+    letterSpacing: "0.01em"
+  }, ...pricesToReactChildren(card.unitPrice, 17)) : null), /*#__PURE__*/React.createElement("rect", {
     x: 0,
     y: CH - badgeH,
     width: CW,
@@ -847,9 +869,8 @@ function PriceCard8x4({
       fill: "#000",
       fontFamily: FONT,
       fontWeight: "400",
-      fontSize: "20",
-      dangerouslySetInnerHTML: { __html: pricesToTspans(card.nowPrice, 20) }
-    }), activeTiers.map((tier, i) => {
+      fontSize: "20"
+    }, ...pricesToReactChildren(card.nowPrice, 20)), activeTiers.map((tier, i) => {
       const each = parseTierEach(tier);
       const fs = i === n - 1 ? lastFs : smallFs;
       return /*#__PURE__*/React.createElement(React.Fragment, {
@@ -862,18 +883,16 @@ function PriceCard8x4({
         fontFamily: FONT,
         fontWeight: "700",
         fontSize: fs,
-        letterSpacing: "-0.3",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(tier, fs) }
-      }), i === n - 1 && each && /*#__PURE__*/React.createElement("text", {
+        letterSpacing: "-0.3"
+      }, ...pricesToReactChildren(tier, fs)), i === n - 1 && each && /*#__PURE__*/React.createElement("text", {
         x: CW - 14,
         y: 126,
         textAnchor: "end",
         fill: "#000",
         fontFamily: FONT,
         fontWeight: "400",
-        fontSize: "10",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(each, 10) }
-      }));
+        fontSize: "10"
+      }, ...pricesToReactChildren(each, 10)));
     }));
   })() : /*#__PURE__*/React.createElement(React.Fragment, null, card.wasPrice && card.priceMode === "wasnow" ? /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
@@ -883,9 +902,8 @@ function PriceCard8x4({
     fontFamily: FONT,
     fontWeight: "400",
     fontSize: "20",
-    textDecoration: "line-through",
-    dangerouslySetInnerHTML: { __html: pricesToTspans(card.wasPrice, 20) }
-  }) : null, card.nowPrice
+    textDecoration: "line-through"
+  }, ...pricesToReactChildren(card.wasPrice, 20)) : null, card.nowPrice
     ? /*#__PURE__*/React.createElement("text", {
         x: CW - 14,
         y: 116,
@@ -894,9 +912,8 @@ function PriceCard8x4({
         fontFamily: FONT,
         fontWeight: "700",
         fontSize: "40",
-        letterSpacing: "-1",
-        dangerouslySetInnerHTML: { __html: pricesToTspans(card.nowPrice, 40) }
-      })
+        letterSpacing: "-1"
+      }, ...pricesToReactChildren(card.nowPrice, 40))
     : /*#__PURE__*/React.createElement("text", {
         x: CW - 14,
         y: 116,
@@ -913,9 +930,8 @@ function PriceCard8x4({
     fill: "#000",
     fontFamily: FONT,
     fontWeight: "400",
-    fontSize: "10",
-    dangerouslySetInnerHTML: { __html: pricesToTspans(card.unitPrice, 10) }
-  }) : null));
+    fontSize: "10"
+  }, ...pricesToReactChildren(card.unitPrice, 10)) : null));
 }
 
 /* ─── App ───────────────────────────────────────────── */
