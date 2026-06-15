@@ -267,7 +267,7 @@ function ensureTexturePNG(key) {
   if (tex._pendingPng) return tex._pendingPng;
   const targetW = 1600, targetH = 200;  // banner aspect ≈ 8:1, ~300dpi-ish
   tex._pendingPng = new Promise((resolve, reject) => {
-    const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + targetW + '" height="' + targetH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' + tex.inner + '</svg>';
+    const svgString = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + targetW + '" height="' + targetH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' + tex.inner + '</svg>';
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const cleanup = () => URL.revokeObjectURL(url);
@@ -321,7 +321,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
       .replace(/id="([^"]+)"/g, 'id="' + idPrefix + '$1"')
       .replace(/url\(#([^)]+)\)/g, 'url(#' + idPrefix + '$1)');
     banner =
-      '<svg xmlns="http://www.w3.org/2000/svg" x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" viewBox="' + tex.viewBox + '" preserveAspectRatio="xMidYMid slice">' +
       inner +
       '</svg>';
   } else {
@@ -1239,7 +1239,7 @@ function App() {
           const cat = CATEGORIES[catKey] || CATEGORIES['fruit-veg'];
           return freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci]);
         }).join('');
-        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
+        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
           '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
