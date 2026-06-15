@@ -299,7 +299,7 @@ const CATEGORIES = {
   'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each' };
+const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each' };
 const PRICE_UNITS = {
   'each':     { label: 'Each',     display: 'EACH' },
   'per-kg':   { label: 'Per kg',   display: 'PER KG' },
@@ -422,8 +422,9 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const ucPrice = s => String(s).toUpperCase().replace(/(\d)P\b/g, '$1p');
   const heroText = hasMulti ? ucPrice(card.multibuyPrice) : (hasNow ? ucPrice(card.nowPrice) : '');
   const subText = hasNow ? (hasMulti ? ucPrice(card.nowPrice) + ' ' + unitDisplay : unitDisplay) : '';
+  const origin = (card.origin || '').toUpperCase();
 
-  const nameFS = 16, heroFS = 44, subFS = 16;
+  const nameFS = 16, heroFS = 44, subFS = 16, originFS = 13;
   // Switched off MadaniArabic for card text: it only ships 400 + 700 weights,
   // so every value between snapped to one of those two. The system sans-serif
   // chain (Helvetica Neue Light / SF Pro Light on Apple, Segoe / Roboto Light
@@ -434,12 +435,16 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const nameAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="400" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5"';
   const heroAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="600" font-size="' + heroFS + '" fill="#000" letter-spacing="-1"';
   const subAttrs  = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="200" font-size="' + subFS + '" fill="#444" letter-spacing="0.5"';
+  // Origin sits between the variety and the hero, smaller and lighter so the eye
+  // reads it as provenance metadata rather than a headline.
+  const originAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="200" font-size="' + originFS + '" fill="#666" letter-spacing="1.2"';
 
   const fields = [];
-  if (item)     fields.push({ h: nameFS, txt: item,     attrs: nameAttrs });
-  if (variety)  fields.push({ h: nameFS, txt: variety,  attrs: nameAttrs });
-  if (heroText) fields.push({ h: heroFS, txt: heroText, attrs: heroAttrs, markup: pricesToTspans(heroText, heroFS) });
-  if (subText)  fields.push({ h: subFS,  txt: subText,  attrs: subAttrs,  markup: pricesToTspans(subText,  subFS)  });
+  if (item)     fields.push({ h: nameFS,   txt: item,     attrs: nameAttrs });
+  if (variety)  fields.push({ h: nameFS,   txt: variety,  attrs: nameAttrs });
+  if (origin)   fields.push({ h: originFS, txt: origin,   attrs: originAttrs });
+  if (heroText) fields.push({ h: heroFS,   txt: heroText, attrs: heroAttrs, markup: pricesToTspans(heroText, heroFS) });
+  if (subText)  fields.push({ h: subFS,    txt: subText,  attrs: subAttrs,  markup: pricesToTspans(subText,  subFS)  });
 
   // ── Distribute evenly between banner bottom and card bottom ───────
   const contentTop = yo + bannerH;
@@ -2624,6 +2629,10 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Variety / Cut ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: cardF.category === 'fruit-veg' ? "e.g. ROYAL GALA" : "e.g. DICED SHOULDER", value: cardF.variety, onChange: e => setF("variety", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Origin ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: cardF.category === 'fruit-veg' ? "e.g. BRITISH, SPAIN" : "e.g. BRITISH, HALAL CERTIFIED", value: cardF.origin || "", onChange: e => setF("origin", e.target.value) })
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Single Price *"),
