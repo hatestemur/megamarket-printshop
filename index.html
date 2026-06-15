@@ -51,6 +51,44 @@ function escSVG(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+/* ─── Pence-as-superscript ───────────────────────────────
+   Convert any £X.YY occurrence in a string into pre-escaped SVG
+   markup where the pence (YY) is rendered as a smaller superscript
+   tspan with the baseline reset so subsequent text isn't shifted.
+   Strings with no £X.YY pattern come back as plain escaped text. */
+function pricesToTspans(text, baseFontSize) {
+  if (!text) return '';
+  const shift = Math.round(baseFontSize * 0.4);
+  const small = Math.round(baseFontSize * 0.6);
+  const parts = [];
+  const rx = /£(\d+)\.(\d{2})/g;
+  let lastEnd = 0, m;
+  while ((m = rx.exec(text)) !== null) {
+    if (m.index > lastEnd) parts.push({ type: 'plain', text: text.slice(lastEnd, m.index) });
+    parts.push({ type: 'pounds', text: '£' + m[1] });
+    parts.push({ type: 'pence', text: m[2] });
+    lastEnd = rx.lastIndex;
+  }
+  if (lastEnd < text.length) parts.push({ type: 'plain', text: text.slice(lastEnd) });
+
+  let out = '';
+  let needsReset = false;
+  for (const p of parts) {
+    if (p.type === 'pence') {
+      out += '<tspan dy="-' + shift + '" font-size="' + small + '">' + escSVG(p.text) + '</tspan>';
+      needsReset = true;
+    } else {
+      const txt = escSVG(p.text);
+      if (needsReset) {
+        out += '<tspan dy="' + shift + '">' + txt + '</tspan>';
+        needsReset = false;
+      } else {
+        out += txt;
+      }
+    }
+  }
+  return out;
+}
 /* ─── PDF download helper ───────────────────────────── */
 async function downloadPDF(cardSVGs, filename) {
   // cardSVGs: array of { svgString, widthMm, heightMm }
@@ -362,8 +400,8 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const fields = [];
   if (item)     fields.push({ h: nameFS, txt: item,     attrs: nameAttrs });
   if (variety)  fields.push({ h: nameFS, txt: variety,  attrs: nameAttrs });
-  if (heroText) fields.push({ h: heroFS, txt: heroText, attrs: heroAttrs });
-  if (subText)  fields.push({ h: subFS,  txt: subText,  attrs: subAttrs });
+  if (heroText) fields.push({ h: heroFS, txt: heroText, attrs: heroAttrs, markup: pricesToTspans(heroText, heroFS) });
+  if (subText)  fields.push({ h: subFS,  txt: subText,  attrs: subAttrs,  markup: pricesToTspans(subText,  subFS)  });
 
   // ── Distribute evenly between banner bottom and card bottom ───────
   const contentTop = yo + bannerH;
@@ -375,7 +413,8 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const fieldsSVG = fields.map(f => {
     const baseline = cursor + f.h * 0.78;  // glyph baseline ≈ 78% down from box top
     cursor += f.h + gap;
-    return '<text x="' + cx + '" y="' + baseline + '" ' + f.attrs + '>' + escSVG(f.txt) + '</text>';
+    const body = f.markup != null ? f.markup : escSVG(f.txt);
+    return '<text x="' + cx + '" y="' + baseline + '" ' + f.attrs + '>' + body + '</text>';
   }).join('');
 
   return (
