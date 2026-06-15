@@ -296,36 +296,34 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // Sub-price aligned LEFT so it doesn't collide with the bottom-right brand mark
   const subSVG = (hasMulti && hasNow) ? '<text x="' + (xS + 10) + '" y="' + (yo + FH - 10) + '" text-anchor="start" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(String(card.nowPrice).toUpperCase() + ' EACH') + '</text>' : '';
 
-  // "m." brand mark, bottom-right corner of card
-  const markH = 14;
-  const markX = xS + FW - 24;
-  const markY = yo + FH - markH - 4;
-  const mark = brandMarkSVG(markX, markY, markH);
-
   return (
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
-    banner + itemSVG + varietySVG + heroSVG + subSVG + mark
+    banner + itemSVG + varietySVG + heroSVG + subSVG
   );
 }
 
 /* ─── Sheet geometry constants: 3 cards per A4 portrait ─── */
-const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 140, xS: 50, yTop: 12, gap: 6 };
+const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 144, xS: 50, yTop: 10, gap: 0 };
 
-/* ─── React component: render full Fresh sheet (3 cards) ─── */
+/* ─── React component: render full Fresh sheet (4 cards) ─── */
 function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
   const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
   const cat = CATEGORIES[category] || CATEGORIES['fruit-veg'];
   const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
   const svgInner = cards.slice(0, 4).map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS, positions[i])).join('');
+  // Single horizontal cut-guides between cards (cards touch, so one cut splits two)
+  const hCuts = [1, 2, 3].map(i =>
+    '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+  ).join('');
   const wH = fit ? '100%' : CW;
   const hH = fit ? '100%' : CH;
   const fullSVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="' + wH + '" height="' + hH + '" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" style="display:block;background:#fff">' +
     '<rect width="' + CW + '" height="' + CH + '" fill="#fff"/>' +
-    // Cut-guide dashed lines down the card edges
+    // Vertical cut-guides down the card edges
     '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
     '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
-    svgInner + '</svg>';
+    svgInner + hCuts + '</svg>';
   return React.createElement('div', { style: { position:'relative', width: fit?'100%':CW, height: fit?'100%':CH } },
     React.createElement('div', { style: { width:'100%', height:'100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
     onSelect && [0,1,2,3].map(i => React.createElement('div', {
@@ -1130,6 +1128,9 @@ function App() {
       if (!sheets.length) { showToast('Nothing to export'); return; }
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
       const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
+      const hCuts = [1, 2, 3].map(i =>
+        '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+      ).join('');
       const pages = sheets.map(sheet => {
         const cat = CATEGORIES[sheet.category] || CATEGORIES['fruit-veg'];
         const svgRows = sheet.cards.slice(0, 4).map((card, ci) => freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci])).join('');
@@ -1138,7 +1139,7 @@ function App() {
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
           '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
           '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
-          svgRows + '</svg>';
+          svgRows + hCuts + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
       await downloadPDF(pages, 'megamarket-fresh-' + Date.now() + '.pdf');
@@ -2450,7 +2451,7 @@ function App() {
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
-        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×70mm · 4 per sheet"),
+        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×72mm · 4 per sheet"),
       /*#__PURE__*/React.createElement("div", {
         style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
       }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, category: freshCategory, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
