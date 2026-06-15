@@ -284,33 +284,43 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
       blobsSVG + '</g>';
   }
 
-  // Product name (item line) - ALL CAPS, medium weight, centered below banner
+  // ── Collect every field that actually has content ─────────────────
   const item = (card.productName || '').toUpperCase();
   const variety = (card.variety || '').toUpperCase();
-  const nameStartY = yo + bannerH + 20;
-  const nameFS = 16;
-  const nameLH = 18;
-  // If only the item is set (no variety), drop it onto the variety row so the
-  // single headline sits halfway between the banner and the hero price.
-  const itemY = variety ? nameStartY : nameStartY + nameLH;
-  const itemSVG = item ? '<text x="' + cx + '" y="' + itemY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
-  const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
-
-  // Price section: hero dominates the lower half of the card
   const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
   const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
   const unitDisplay = (PRICE_UNITS[card.priceUnit] || PRICE_UNITS.each).display;
-  const heroFS = 40, subFS = 16;
-  const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : String(card.nowPrice || '').toUpperCase();
-  const heroY = yo + FH - 32;
-  const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="800" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
-  // Subtitle below hero: multi mode → "{singlePrice} {UNIT}"; single mode → "{UNIT}".
+  const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : (hasNow ? String(card.nowPrice).toUpperCase() : '');
   const subText = hasNow ? (hasMulti ? String(card.nowPrice).toUpperCase() + ' ' + unitDisplay : unitDisplay) : '';
-  const subSVG = subText ? '<text x="' + cx + '" y="' + (yo + FH - 8) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.5">' + escSVG(subText) + '</text>' : '';
+
+  const nameFS = 16, heroFS = 40, subFS = 16;
+  const textAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" fill="#000"';
+  const nameAttrs = textAttrs + ' font-weight="500" font-size="' + nameFS + '" letter-spacing="0.5"';
+  const heroAttrs = textAttrs + ' font-weight="800" font-size="' + heroFS + '" letter-spacing="-1.5"';
+  const subAttrs  = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.5"';
+
+  const fields = [];
+  if (item)     fields.push({ h: nameFS, txt: item,     attrs: nameAttrs });
+  if (variety)  fields.push({ h: nameFS, txt: variety,  attrs: nameAttrs });
+  if (heroText) fields.push({ h: heroFS, txt: heroText, attrs: heroAttrs });
+  if (subText)  fields.push({ h: subFS,  txt: subText,  attrs: subAttrs });
+
+  // ── Distribute evenly between banner bottom and card bottom ───────
+  const contentTop = yo + bannerH;
+  const contentH = FH - bannerH;
+  const sumH = fields.reduce((s, f) => s + f.h, 0);
+  const N = fields.length;
+  const gap = N > 0 ? (contentH - sumH) / (N + 1) : 0;
+  let cursor = contentTop + gap;
+  const fieldsSVG = fields.map(f => {
+    const baseline = cursor + f.h * 0.78;  // glyph baseline ≈ 78% down from box top
+    cursor += f.h + gap;
+    return '<text x="' + cx + '" y="' + baseline + '" ' + f.attrs + '>' + escSVG(f.txt) + '</text>';
+  }).join('');
 
   return (
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
-    banner + itemSVG + varietySVG + heroSVG + subSVG
+    banner + fieldsSVG
   );
 }
 
