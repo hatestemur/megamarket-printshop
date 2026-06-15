@@ -342,8 +342,10 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
   const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
   const unitDisplay = (PRICE_UNITS[card.priceUnit] || PRICE_UNITS.each).display;
-  const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : (hasNow ? String(card.nowPrice).toUpperCase() : '');
-  const subText = hasNow ? (hasMulti ? String(card.nowPrice).toUpperCase() + ' ' + unitDisplay : unitDisplay) : '';
+  // Uppercase price strings but leave the pence "p" suffix lowercase ("69p" not "69P")
+  const ucPrice = s => String(s).toUpperCase().replace(/(\d)P\b/g, '$1p');
+  const heroText = hasMulti ? ucPrice(card.multibuyPrice) : (hasNow ? ucPrice(card.nowPrice) : '');
+  const subText = hasNow ? (hasMulti ? ucPrice(card.nowPrice) + ' ' + unitDisplay : unitDisplay) : '';
 
   const nameFS = 16, heroFS = 40, subFS = 16;
   // Switched off MadaniArabic for card text: it only ships 400 + 700 weights,
