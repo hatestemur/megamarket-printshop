@@ -2404,22 +2404,6 @@ function App() {
     /*#__PURE__*/React.createElement("div", { className: "form-pane" },
       /*#__PURE__*/React.createElement("div", { style: { height: 3, background: (CATEGORIES[cardF.category]||CATEGORIES['fruit-veg']).color, marginBottom: 14, borderRadius: 2 } }),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
-        /*#__PURE__*/React.createElement("label", { style: lbl }, "Category for this card"),
-        /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
-          FRESH_ORDER.map(key => /*#__PURE__*/React.createElement("button", {
-            key: key,
-            onClick: () => setF('category', key),
-            style: {
-              padding: "6px 10px",
-              background: cardF.category === key ? CATEGORIES[key].color : "#f0f0f0",
-              color: cardF.category === key ? "#fff" : "#555",
-              border: cardF.category === key ? "2px solid " + CATEGORIES[key].color : "2px solid #e0e0e0",
-              borderRadius: 4, fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "system-ui, sans-serif"
-            }
-          }, CATEGORIES[key].label))
-        )
-      ),
-      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
           [0,1,2,3].map(i => /*#__PURE__*/React.createElement("button", {
@@ -2437,6 +2421,22 @@ function App() {
           }, "Card ", i + 1, cardsFresh[i] && cardsFresh[i].productName && /*#__PURE__*/React.createElement("span", {
             style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxFresh === i ? K : "#4caf50", display: "inline-block" }
           })))
+        )
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Category for this card"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+          FRESH_ORDER.map(key => /*#__PURE__*/React.createElement("button", {
+            key: key,
+            onClick: () => setF('category', key),
+            style: {
+              padding: "6px 10px",
+              background: cardF.category === key ? CATEGORIES[key].color : "#f0f0f0",
+              color: cardF.category === key ? "#fff" : "#555",
+              border: cardF.category === key ? "2px solid " + CATEGORIES[key].color : "2px solid #e0e0e0",
+              borderRadius: 4, fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "system-ui, sans-serif"
+            }
+          }, CATEGORIES[key].label))
         )
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
