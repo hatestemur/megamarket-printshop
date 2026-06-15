@@ -287,9 +287,9 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // Product name (item line) - ALL CAPS, medium weight, centered below banner
   const item = (card.productName || '').toUpperCase();
   const variety = (card.variety || '').toUpperCase();
-  const nameStartY = yo + bannerH + 14;
-  const nameFS = 18;
-  const nameLH = 19;
+  const nameStartY = yo + bannerH + 20;
+  const nameFS = 16;
+  const nameLH = 18;
   const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
   const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
 
@@ -297,7 +297,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
   const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
   const unitDisplay = (PRICE_UNITS[card.priceUnit] || PRICE_UNITS.each).display;
-  const heroFS = 44, subFS = 18;
+  const heroFS = 40, subFS = 16;
   const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : String(card.nowPrice || '').toUpperCase();
   const heroY = yo + FH - 32;
   const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="800" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.5">' + escSVG(heroText) + '</text>' : '';
