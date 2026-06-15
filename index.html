@@ -303,7 +303,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
 }
 
 /* ─── Sheet geometry constants: 3 cards per A4 portrait ─── */
-const FRESH_SHEET = { CW: 420, CH: 594, FW: 320, FH: 144, xS: 50, yTop: 10, gap: 0 };
+const FRESH_SHEET = { CW: 420, CH: 594, FW: 216, FH: 144, xS: 102, yTop: 10, gap: 0 };
 
 /* ─── React component: render full Fresh sheet (4 cards) ─── */
 function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
@@ -2451,7 +2451,7 @@ function App() {
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
-        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 160×72mm · 4 per sheet"),
+        (CATEGORIES[freshCategory]||CATEGORIES['fruit-veg']).label, " · 108×72mm · 4 per sheet"),
       /*#__PURE__*/React.createElement("div", {
         style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
       }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, category: freshCategory, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
