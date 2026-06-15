@@ -201,7 +201,14 @@ const CATEGORIES = {
   'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg' };
+const EMPTY_FRESH = { productName:'', variety:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each' };
+const PRICE_UNITS = {
+  'each':     { label: 'Each',     display: 'EACH' },
+  'per-kg':   { label: 'Per kg',   display: 'PER KG' },
+  'per-100g': { label: 'Per 100g', display: 'PER 100G' },
+  'per-pack': { label: 'Per pack', display: 'PER PACK' }
+};
+const PRICE_UNIT_ORDER = ['each', 'per-kg', 'per-100g', 'per-pack'];
 
 /* ─── Hand-placed organic blob shapes for the textured banner ──
    Coords assume banner is 320 wide × 30 tall (SVG units). Each path
@@ -286,15 +293,17 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const itemSVG = item ? '<text x="' + cx + '" y="' + nameStartY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(item) + '</text>' : '';
   const varietySVG = variety ? '<text x="' + cx + '" y="' + (nameStartY + nameLH) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5">' + escSVG(variety) + '</text>' : '';
 
-  // Price section: multibuy hero (if set) + each subtitle, OR each as hero
+  // Price section: multibuy hero (if set) + per-unit subtitle, OR single price as hero
   const hasMulti = !!(card.multibuyPrice && String(card.multibuyPrice).trim());
   const hasNow = !!(card.nowPrice && String(card.nowPrice).trim());
-  const heroFS = 32, subFS = 12;
+  const unitDisplay = (PRICE_UNITS[card.priceUnit] || PRICE_UNITS.each).display;
+  const heroFS = 32, subFS = 14;
   const heroText = hasMulti ? String(card.multibuyPrice).toUpperCase() : String(card.nowPrice || '').toUpperCase();
-  const heroY = yo + FH - 28;
+  const heroY = yo + FH - 32;
   const heroSVG = heroText ? '<text x="' + cx + '" y="' + heroY + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + heroFS + '" fill="#000" letter-spacing="-1.2">' + escSVG(heroText) + '</text>' : '';
-  // Sub-price aligned LEFT so it doesn't collide with the bottom-right brand mark
-  const subSVG = (hasMulti && hasNow) ? '<text x="' + (xS + 10) + '" y="' + (yo + FH - 10) + '" text-anchor="start" font-family="MadaniArabic, sans-serif" font-weight="500" font-size="' + subFS + '" fill="#444" letter-spacing="0.3">' + escSVG(String(card.nowPrice).toUpperCase() + ' EACH') + '</text>' : '';
+  // Subtitle below hero: in multi mode shows "{singlePrice} {UNIT}"; in single mode shows just "{UNIT}".
+  const subText = hasNow ? (hasMulti ? String(card.nowPrice).toUpperCase() + ' ' + unitDisplay : unitDisplay) : '';
+  const subSVG = subText ? '<text x="' + cx + '" y="' + (yo + FH - 10) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="600" font-size="' + subFS + '" fill="#444" letter-spacing="0.5">' + escSVG(subText) + '</text>' : '';
 
   return (
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
@@ -2428,6 +2437,22 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Single Price *"),
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 99p or £1.49", value: cardF.nowPrice, onChange: e => setF("nowPrice", e.target.value), onBlur: e => setF("nowPrice", formatPrice(e.target.value)) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Pricing Unit"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+          PRICE_UNIT_ORDER.map(key => /*#__PURE__*/React.createElement("button", {
+            key: key,
+            onClick: () => setF('priceUnit', key),
+            style: {
+              padding: "6px 10px",
+              background: cardF.priceUnit === key ? K : "#f0f0f0",
+              color: cardF.priceUnit === key ? W : "#555",
+              border: cardF.priceUnit === key ? "2px solid " + K : "2px solid #e0e0e0",
+              borderRadius: 4, fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "system-ui, sans-serif"
+            }
+          }, PRICE_UNITS[key].label))
+        )
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Multibuy Deal ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional — becomes the hero)")),
