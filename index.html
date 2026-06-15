@@ -299,9 +299,10 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // chain (Helvetica Neue Light / SF Pro Light on Apple, Segoe / Roboto Light
   // elsewhere) actually honours light weights.
   const SANS = '-apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif';
-  const textAttrs = 'text-anchor="middle" font-family="' + SANS + '" fill="#000"';
-  const nameAttrs = textAttrs + ' font-weight="300" font-size="' + nameFS + '" letter-spacing="0.5"';
-  const heroAttrs = textAttrs + ' font-weight="500" font-size="' + heroFS + '" letter-spacing="-1"';
+  // Item + Variety pinned to MadaniArabic-Regular (the embedded brand font, weight 400).
+  // Hero + Sub stay on the system sans-serif chain so we can pick light weights.
+  const nameAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="400" font-size="' + nameFS + '" fill="#000" letter-spacing="0.5"';
+  const heroAttrs = 'text-anchor="middle" font-family="' + SANS + '" fill="#000" font-weight="500" font-size="' + heroFS + '" letter-spacing="-1"';
   const subAttrs  = 'text-anchor="middle" font-family="' + SANS + '" font-weight="200" font-size="' + subFS + '" fill="#444" letter-spacing="0.5"';
 
   const fields = [];
