@@ -105,17 +105,28 @@ function pricesToReactChildren(text, baseFontSize) {
   const out = [];
   const rx = /£(\d+)\.(\d{2})/g;
   let lastEnd = 0, m, idx = 0;
-  while ((m = rx.exec(text)) !== null) {
-    if (m.index > lastEnd) out.push(text.slice(lastEnd, m.index));
-    out.push('£' + m[1] + '.');
-    out.push(React.createElement('tspan', { key: 'p' + (idx++), dy: -shift, fontSize: small }, m[2]));
-    lastEnd = rx.lastIndex;
-    if (lastEnd < text.length) {
-      // Reset the baseline so anything after the pence sits back on the line.
-      out.push(React.createElement('tspan', { key: 'r' + (idx++), dy: shift }, ''));
+  let needsReset = false;
+  // Plain segments after a superscript MUST be wrapped in a tspan with the
+  // reverse dy so the cursor lands back on the original baseline AND the
+  // dy actually takes effect (an empty tspan doesn't move the cursor in most
+  // renderers — that bug was making " each" inherit the raised pence baseline).
+  const pushPlain = (piece) => {
+    if (!piece) return;
+    if (needsReset) {
+      out.push(React.createElement('tspan', { key: 'r' + (idx++), dy: shift }, piece));
+      needsReset = false;
+    } else {
+      out.push(piece);
     }
+  };
+  while ((m = rx.exec(text)) !== null) {
+    if (m.index > lastEnd) pushPlain(text.slice(lastEnd, m.index));
+    pushPlain('£' + m[1] + '.');
+    out.push(React.createElement('tspan', { key: 'p' + (idx++), dy: -shift, fontSize: small }, m[2]));
+    needsReset = true;
+    lastEnd = rx.lastIndex;
   }
-  if (lastEnd < text.length) out.push(text.slice(lastEnd));
+  if (lastEnd < text.length) pushPlain(text.slice(lastEnd));
   return out;
 }
 
