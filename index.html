@@ -316,8 +316,10 @@ function FreshSheet({ cards, category, editIdx, onSelect, fit }) {
   const cat = CATEGORIES[category] || CATEGORIES['fruit-veg'];
   const positions = [yTop, yTop + FH + gap, yTop + 2 * (FH + gap)];
   const svgInner = cards.slice(0, 3).map((card, i) => freshCardSVG(card, cat, i, FW, FH, xS, positions[i])).join('');
+  const wH = fit ? '100%' : CW;
+  const hH = fit ? '100%' : CH;
   const fullSVG =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" style="display:block;background:#fff">' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + wH + '" height="' + hH + '" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" style="display:block;background:#fff">' +
     '<rect width="' + CW + '" height="' + CH + '" fill="#fff"/>' +
     // Cut-guide dashed lines down the card edges
     '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
