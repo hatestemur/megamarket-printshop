@@ -329,18 +329,6 @@ const BANNER_BLOBS = [
   'M270,15 C280,12 290,15 293,21 C290,26 280,28 272,25 C264,22 262,18 270,15 Z'
 ];
 
-/* ─── m. brand-mark SVG (small, for bottom-right of each card) ── */
-function brandMarkSVG(x, y, h, fg, bg) {
-  // Yellow rounded tab with black "m." inside. h ≈ 16 units.
-  const w = Math.round(h * 1.15);
-  return (
-    '<path d="M' + x + ',' + y + ' L' + (x+w-h*0.18) + ',' + y +
-    ' L' + (x+w) + ',' + (y+h*0.6) +
-    ' L' + (x+w) + ',' + (y+h) +
-    ' L' + x + ',' + (y+h) + ' Z" fill="' + (bg||'#FEDE00') + '"/>' +
-    '<text x="' + (x+w/2) + '" y="' + (y+h*0.78) + '" text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="900" font-size="' + Math.round(h*0.72) + '" fill="' + (fg||'#000') + '" letter-spacing="-0.5">m.</text>'
-  );
-}
 
 /* ─── Rasterize one texture SVG to a small JPEG dataURL ──
    Cached on the texture object (._png) so subsequent calls return
