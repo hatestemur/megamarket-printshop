@@ -299,7 +299,7 @@ const CATEGORIES = {
   'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each' };
+const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each', specialOffer:false };
 const PRICE_UNITS = {
   'each':     { label: 'Each',     display: 'EACH' },
   'per-kg':   { label: 'Per kg',   display: 'PER KG' },
@@ -460,9 +460,29 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
     return '<text x="' + cx + '" y="' + baseline + '" ' + f.attrs + '>' + body + '</text>';
   }).join('');
 
+  // Diagonal red "SPECIAL OFFER" ribbon clipping the bottom-right corner.
+  // Drawn after the fields so it sits on top of any sub-price text it overlaps.
+  let ribbon = '';
+  if (card.specialOffer) {
+    const A = 70, B = 40;                // ribbon outer / inner offsets along the edges
+    const rx = xS + FW, ry = yo + FH;    // bottom-right corner of card
+    const cxR = rx - (A + B) / 4;        // centroid x
+    const cyR = ry - (A + B) / 4;        // centroid y
+    const points =
+      rx + ',' + (ry - A) + ' ' +
+      rx + ',' + (ry - B) + ' ' +
+      (rx - B) + ',' + ry + ' ' +
+      (rx - A) + ',' + ry;
+    ribbon =
+      '<polygon points="' + points + '" fill="#cc2222"/>' +
+      '<text x="' + cxR + '" y="' + (cyR + 3.2) + '" transform="rotate(-45 ' + cxR + ' ' + cyR + ')" ' +
+      'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="9.5" ' +
+      'fill="#ffffff" letter-spacing="1.6">SPECIAL OFFER</text>';
+  }
+
   return (
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
-    banner + fieldsSVG
+    banner + fieldsSVG + ribbon
   );
 }
 
@@ -2661,9 +2681,26 @@ function App() {
           }, PRICE_UNITS[key].label))
         )
       ),
-      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Multibuy Deal ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional — becomes the hero)")),
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 FOR £1.75", value: cardF.multibuyPrice, onChange: e => setF("multibuyPrice", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Special Offer?"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 6 } },
+          [["yes", true], ["no", false]].map(([lab, val]) => /*#__PURE__*/React.createElement("button", {
+            key: lab,
+            onClick: () => setF('specialOffer', val),
+            style: {
+              flex: 1, padding: "8px 0", cursor: "pointer",
+              background: !!cardF.specialOffer === val ? (val ? "#cc2222" : K) : "#f0f0f0",
+              color: !!cardF.specialOffer === val ? W : "#555",
+              border: !!cardF.specialOffer === val ? "2px solid " + (val ? "#cc2222" : K) : "2px solid #e0e0e0",
+              borderRadius: 4, fontWeight: 700, fontSize: 11, textTransform: "uppercase",
+              letterSpacing: 1, cursor: "pointer", fontFamily: "system-ui, sans-serif"
+            }
+          }, val ? "Yes — add red ribbon" : "No"))
+        )
       ),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
         editIdxFresh < 3
