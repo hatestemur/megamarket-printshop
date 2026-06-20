@@ -955,29 +955,35 @@ function PriceCard8x4({
     fontWeight: "400",
     fontSize: "20",
     textDecoration: "line-through"
-  }, card.wasPrice) : null, card.nowPrice
-    ? /*#__PURE__*/React.createElement("text", {
-        x: CW - 14,
-        y: 116,
-        textAnchor: "end",
-        fill: "#000",
-        fontFamily: FONT,
-        fontWeight: "700",
-        fontSize: "50",
-        letterSpacing: "-1"
-      }, ...pricesToReactChildren(card.nowPrice, 40))
-    : /*#__PURE__*/React.createElement("text", {
-        x: CW - 14,
-        y: 116,
-        textAnchor: "end",
-        fill: "#000",
-        fontFamily: FONT,
-        fontWeight: "700",
-        fontSize: "50",
-        letterSpacing: "-1"
-      }, /*#__PURE__*/React.createElement("tspan", { fill: "#ddd" }, "0.00")), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
+  }, card.wasPrice) : null, (() => {
+    // Bigger hero (50pt) only in single mode — wasnow has a was-line above
+    // that would crash into the taller glyphs. unitY also pushed down in
+    // single mode to clear the deeper descender of the larger hero.
+    const heroFs = card.priceMode === "single" ? 50 : 40;
+    return card.nowPrice
+      ? /*#__PURE__*/React.createElement("text", {
+          x: CW - 14,
+          y: 116,
+          textAnchor: "end",
+          fill: "#000",
+          fontFamily: FONT,
+          fontWeight: "700",
+          fontSize: String(heroFs),
+          letterSpacing: "-1"
+        }, ...pricesToReactChildren(card.nowPrice, heroFs))
+      : /*#__PURE__*/React.createElement("text", {
+          x: CW - 14,
+          y: 116,
+          textAnchor: "end",
+          fill: "#000",
+          fontFamily: FONT,
+          fontWeight: "700",
+          fontSize: String(heroFs),
+          letterSpacing: "-1"
+        }, /*#__PURE__*/React.createElement("tspan", { fill: "#ddd" }, "0.00"));
+  })(), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
-    y: 130,
+    y: card.priceMode === "single" ? 140 : 130,
     textAnchor: "end",
     fill: "#000",
     fontFamily: FONT,
@@ -1448,8 +1454,10 @@ function App() {
             });
           } else {
             const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
-            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="50" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 50) + '</text>';
-            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
+            const heroFs = card.priceMode === "single" ? 50 : 40;
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', heroFs) + '</text>';
+            const unitY = yo + (card.priceMode === "single" ? 140 : 130);
+            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + unitY + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
             priceLines8 = wasLine + nowLine + unitLine;
           }
           const validLine = card.validUntil ? '<text x="' + (xStart+sideW+12) + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
@@ -1592,8 +1600,10 @@ function App() {
             });
           } else {
             const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
-            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="50" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 50) + '</text>';
-            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
+            const heroFs = card.priceMode === 'single' ? 50 : 40;
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', heroFs) + '</text>';
+            const unitY = yo + (card.priceMode === 'single' ? 140 : 130);
+            const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + unitY + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
             priceText8 = wasLine + nowLine + unitLine;
           }
           const validLine = card.validUntil ? '<text x="' + _8nX + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
