@@ -901,7 +901,7 @@ function PriceCard8x4({
     const priceH = priceAreaBot - priceAreaTop; // ~50px
     // nowPrice: 10px, gap: 3px, tier: ?, gap: 3px, each: 10px
     const reservedRows = 10 + 3; // each + gap = 13
-    const tierH = Math.max(12, Math.min(34, Math.floor((priceH - reservedRows) / n)));
+    const tierH = Math.max(12, Math.min(42, Math.floor((priceH - reservedRows) / n)));
     const lastFs = tierH;
     const smallFs = Math.max(10, Math.floor(tierH * 0.7));
     const ys = [];
@@ -963,7 +963,7 @@ function PriceCard8x4({
         fill: "#000",
         fontFamily: FONT,
         fontWeight: "700",
-        fontSize: "40",
+        fontSize: "50",
         letterSpacing: "-1"
       }, ...pricesToReactChildren(card.nowPrice, 40))
     : /*#__PURE__*/React.createElement("text", {
@@ -973,7 +973,7 @@ function PriceCard8x4({
         fill: "#000",
         fontFamily: FONT,
         fontWeight: "700",
-        fontSize: "40",
+        fontSize: "50",
         letterSpacing: "-1"
       }, /*#__PURE__*/React.createElement("tspan", { fill: "#ddd" }, "0.00")), card.unitPrice ? /*#__PURE__*/React.createElement("text", {
     x: CW - 14,
@@ -1434,7 +1434,7 @@ function App() {
             const n = activeTiers.length || 1;
             const logoBotR8 = Math.round(800 * sideW / 607.7);
             const priceH = (logoBotR8 - 4) - 30;
-            const tierH = Math.max(12, Math.min(34, Math.floor((priceH - 13) / n)));
+            const tierH = Math.max(12, Math.min(42, Math.floor((priceH - 13) / n)));
             const lastFs = tierH, smallFs = Math.max(10, Math.floor(tierH * 0.7));
             const ys = []; let acc = 0;
             activeTiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
@@ -1448,7 +1448,7 @@ function App() {
             });
           } else {
             const wasLine = card.wasPrice && card.priceMode === "wasnow" ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
-            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 40) + '</text>';
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="50" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 50) + '</text>';
             const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
             priceLines8 = wasLine + nowLine + unitLine;
           }
@@ -1579,7 +1579,7 @@ function App() {
             const n = activeTiers.length || 1;
             const logoBotR8 = Math.round(800 * sideW / 607.7);
             const priceH = (logoBotR8 - 4) - 30;
-            const tierH = Math.max(12, Math.min(34, Math.floor((priceH - 13) / n)));
+            const tierH = Math.max(12, Math.min(42, Math.floor((priceH - 13) / n)));
             const lastFs = tierH, smallFs = Math.max(10, Math.floor(tierH * 0.7));
             const ys = []; let acc = 0;
             activeTiers.forEach((_, i) => { const fs = i === n-1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
@@ -1592,7 +1592,7 @@ function App() {
             });
           } else {
             const wasLine = card.wasPrice && card.priceMode === 'wasnow' ? '<text x="' + (CW-14) + '" y="' + (yo+80) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="20" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>' : '';
-            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="40" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 40) + '</text>';
+            const nowLine = '<text x="' + (CW-14) + '" y="' + (yo+116) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="50" letter-spacing="-1">' + pricesToTspans(card.nowPrice || '', 50) + '</text>';
             const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + (yo+130) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
             priceText8 = wasLine + nowLine + unitLine;
           }
