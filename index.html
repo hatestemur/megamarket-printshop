@@ -200,6 +200,28 @@ function formatPrice(v) {
   return "£" + stripped;
 }
 
+/* ─── Auto-caps every user-entered field on a card ──────────────
+   - Plain text (productName, size, validUntil) → ALL CAPS
+   - Prices (nowPrice, wasPrice, unitPrice, multibuyPrice, tiers)
+     → ALL CAPS but the pence "p" stays lowercase ("69p" not "69P")
+   - Returns a new card object; original is untouched so the form
+     input values keep whatever case the user actually typed. */
+const _uc  = s => s ? String(s).toUpperCase() : s;
+const _ucP = s => s ? String(s).toUpperCase().replace(/(\d)P\b/g, '$1p') : s;
+function ucCard(card) {
+  if (!card) return card;
+  return Object.assign({}, card, {
+    productName:   _uc(card.productName),
+    size:          _uc(card.size),
+    validUntil:    _uc(card.validUntil),
+    nowPrice:      _ucP(card.nowPrice),
+    wasPrice:      _ucP(card.wasPrice),
+    unitPrice:     _ucP(card.unitPrice),
+    multibuyPrice: _ucP(card.multibuyPrice),
+    tiers: Array.isArray(card.tiers) ? card.tiers.map(_ucP) : card.tiers
+  });
+}
+
 /* ─── Parse per-item price from a tier string ────── */
 function parseTierEach(tier) {
   // Matches: "2 for £3.00", "3 for 99p", "buy 2 get 1 free" (skip), "£2 each" etc.
@@ -212,8 +234,8 @@ function parseTierEach(tier) {
   if (!qty || !total) return "";
   const each = total / qty;
   const pence = each * 100;
-  if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
-  return "£" + each.toFixed(2) + " each";
+  if (pence < 100) return Math.round(pence * 10) / 10 + "p EACH";
+  return "£" + each.toFixed(2) + " EACH";
 }
 
 /* ─── Unit price auto-calculator ─────────────────── */
@@ -232,8 +254,8 @@ function calcUnitPrice(size, price) {
     if (!n) return "";
     const perItem = priceVal / n;
     const pence = perItem * 100;
-    if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
-    return "\u00a3" + perItem.toFixed(2) + " each";
+    if (pence < 100) return Math.round(pence * 10) / 10 + "p EACH";
+    return "\u00a3" + perItem.toFixed(2) + " EACH";
   }
   // Pack-only: "12 pack", "pack of 6", "6pk", "x12", "24 cans"
   const packOnly = s.match(/^(\d+)\s*(pack|pk|pcs?|pieces?|count|ct|cans?|bottles?|bags?|tins?|rolls?|sheets?|tabs?|tablets?|caps?|capsules?|sachets?|pods?|wipes?)$/i) || s.match(/^pack\s+of\s+(\d+)$/i) || s.match(/^x\s*(\d+)$/i);
@@ -242,8 +264,8 @@ function calcUnitPrice(size, price) {
     if (!n) return "";
     const perItem = priceVal / n;
     const pence = perItem * 100;
-    if (pence < 100) return Math.round(pence * 10) / 10 + "p each";
-    return "\u00a3" + perItem.toFixed(2) + " each";
+    if (pence < 100) return Math.round(pence * 10) / 10 + "p EACH";
+    return "\u00a3" + perItem.toFixed(2) + " EACH";
   }
   // Single item with weight/volume: "500g", "1kg", "750ml" → per 100g/ml
   const singleM = s.match(/(\d+\.?\d*)\s*(g|kg|ml|l\b|cl)/i);
@@ -536,6 +558,7 @@ function PriceCard({
   scale = 1,
   fit = false
 }) {
+  card = ucCard(card);  // auto-caps every user-entered field
   const CW = 420,
     CH = 594; // A4 ratio: 210×297mm → 420×594px
   const sideW = 92;
@@ -734,6 +757,7 @@ function PriceCard8x4({
   scale = 1,
   fit = false
 }) {
+  card = ucCard(card);  // auto-caps every user-entered field
   const CW = 420,
     CH = 148; // A4 canvas: 148 ≈ 74mm × 2 (4 per A4)
   const CARD_W = 304; // 152mm × 2 SVG units/mm
@@ -1306,6 +1330,7 @@ function App() {
         return lines;
       };
       const pages = items.map(card => {
+        card = ucCard(card);
         const nameLen = (card.productName || "").length;
         const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
         const _nX = sideW + 18;
@@ -1386,6 +1411,7 @@ function App() {
       const CW = 420, CH = 148, sideW = 64, CARD_W = 304, xStart = CW - CARD_W;
       const pages = sheets.map(sheet => {
         const svgRows = sheet.map((card, ci) => {
+          card = ucCard(card);
           const badge = "SPECIAL OFFER";
           const badgeFontSize = Math.max(7, Math.min(11, Math.floor(56 / (Math.max(...badge.split(" ").map(w => w.length)) * 0.62))));
           const logoBotR = Math.round(800 * sideW / 607.7);
@@ -1481,6 +1507,7 @@ function App() {
         ...(!passedQueue && form.productName ? [form] : [])];
       if (!items.length) { showToast('Nothing to export'); return; }
       const pages = items.map(card => {
+        card = ucCard(card);
         const nameLen = (card.productName || '').length;
         const nameFontSize = nameLen > 40 ? 24 : nameLen > 28 ? 28 : nameLen > 16 ? 31 : 34;
         const _nX = sideW + 18;
@@ -1535,6 +1562,7 @@ function App() {
       const sheets = all8x4.length ? all8x4 : [cards8x4];
       const pages = sheets.map(sheet => {
         const svgRows = sheet.map((card, ci) => {
+          card = ucCard(card);
           const yo = ci * CH;
           const _8nFS = 17, _8nLH = Math.round(17 * 1.2);
           const _8nX = xStart + sideW + 12;
