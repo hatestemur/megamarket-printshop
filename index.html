@@ -508,7 +508,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   );
 }
 
-/* ─── Sheet geometry constants: 3 cards per A4 portrait ─── */
+/* ─── Sheet geometry constants: 4 cards per A4 portrait ─── */
 const FRESH_SHEET = { CW: 420, CH: 594, FW: 216, FH: 144, xS: 102, yTop: 10, gap: 0 };
 
 /* ─── React component: render full Fresh sheet (4 cards) ─── */
@@ -992,6 +992,131 @@ function PriceCard8x4({
   }, ...pricesToReactChildren(card.unitPrice, 10)) : null));
 }
 
+/* ─── Shelf 108×72: 8×4-style talker at Fresh size (4 per A4) ──── */
+// Full logo path (outer wedge + "M" cut-out), shared by preview + export.
+const LOGO_D = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
+
+// Canvas-based word wrap — matches browser rendering so preview and export
+// break lines identically.
+let _mmWrapCtx = null;
+function mmWrap(text, maxW, fontSize, fontWeight) {
+  if (!_mmWrapCtx) _mmWrapCtx = document.createElement('canvas').getContext('2d');
+  _mmWrapCtx.font = (fontWeight || '500') + ' ' + fontSize + 'px MadaniArabic, sans-serif';
+  const words = (text || '').split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (_mmWrapCtx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    else cur = test;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// One shelf-talker cell (216×144 = 108×72mm) as an SVG string, positioned at
+// (xo, yo). Uses <text> (not foreignObject) so it renders in both the live
+// preview and the rasterised PDF export. Same design as the 8×4 talker,
+// re-fitted to the smaller Fresh-sized cell.
+function shelfSmCellSVG(card, xo, yo, textOnly, logoPath) {
+  card = ucCard(card || {});
+  const CELL_W = 216, CELL_H = 144, sideW = 52;
+  const logoBotR = Math.round(800 * sideW / 607.7); // ≈68 — black block bottom
+  const redH = CELL_H - logoBotR;                    // ≈76
+  const scaleX = (sideW / 607.7).toFixed(5);
+  const nX = xo + sideW + 10;   // text left edge
+  const pR = xo + CELL_W - 10;  // price right edge
+  const badge = "SPECIAL OFFER";
+  const longest = Math.max.apply(null, badge.split(" ").map(w => w.length));
+  const badgeFs = Math.max(8, Math.min(11, Math.floor((sideW - 8) / (longest * 0.6))));
+  const badgeFill = textOnly ? "#000" : "#FEDE00";
+
+  let s = '';
+  s += '<rect x="' + xo + '" y="' + yo + '" width="' + CELL_W + '" height="' + CELL_H + '" fill="white"/>';
+  if (!textOnly) {
+    s += '<rect x="' + xo + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>';
+    s += '<rect x="' + xo + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + redH + '" fill="#CC2222"/>';
+    s += '<g transform="translate(' + xo + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>';
+  }
+  s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.42) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">SPECIAL</text>';
+  s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.66) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">OFFER</text>';
+
+  // Product name (word-wrapped) + size
+  const nL = (card.productName || '').length;
+  const nameFs = nL > 32 ? 10 : nL > 20 ? 11 : nL > 12 ? 12 : 14;
+  const nameLH = Math.round(nameFs * 1.15);
+  const lines = mmWrap(card.productName || '', pR - nX, nameFs, '500');
+  s += lines.map((ln, i) =>
+    '<text x="' + nX + '" y="' + (yo + 6 + nameFs + i * nameLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFs + '" letter-spacing="-0.2">' + pricesToTspans(ln, nameFs) + '</text>'
+  ).join('');
+  const nameBlockH = nameFs + (lines.length - 1) * nameLH;
+  if (card.size) {
+    const sizeY = Math.min(yo + 66, yo + 6 + nameBlockH + 2 + 9);
+    s += '<text x="' + nX + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="9">' + pricesToTspans(card.size, 9) + '</text>';
+  }
+
+  // Prices — right-aligned
+  if (card.priceMode === 'multibuy') {
+    const tiers = (card.tiers || []).filter(t => t && t.trim());
+    const n = tiers.length || 1;
+    const maxLen = Math.max.apply(null, tiers.map(t => t.length).concat([1]));
+    const capFs = Math.floor((pR - nX) / (maxLen * 0.55));
+    const lastFs = Math.min(n === 1 ? 34 : n === 2 ? 28 : n === 3 ? 22 : 18, capFs);
+    const smallFs = Math.min(n === 1 ? 34 : n === 2 ? 18 : n === 3 ? 15 : 12, Math.floor(capFs * 0.7));
+    const ys = []; let acc = 0;
+    tiers.forEach((_, i) => { const fs = i === n - 1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
+    const startY = (yo + 110) - acc;
+    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 54) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="13">' + pricesToTspans(card.nowPrice, 13) + '</text>';
+    tiers.forEach((tier, i) => {
+      const fs = i === n - 1 ? lastFs : smallFs;
+      s += '<text x="' + pR + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.4">' + pricesToTspans(tier, fs) + '</text>';
+      if (i === n - 1) { const each = parseTierEach(tier); if (each) s += '<text x="' + pR + '" y="' + (yo + 124) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(each, 8) + '</text>'; }
+    });
+  } else {
+    if (card.wasPrice && card.priceMode === 'wasnow') s += '<text x="' + pR + '" y="' + (yo + 72) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="15" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>';
+    const heroFs = card.priceMode === 'single' ? 34 : 28;
+    s += '<text x="' + pR + '" y="' + (yo + 108) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">' + (card.nowPrice ? pricesToTspans(card.nowPrice, heroFs) : '<tspan fill="#ddd">0.00</tspan>') + '</text>';
+    if (card.unitPrice) s += '<text x="' + pR + '" y="' + (yo + (card.priceMode === 'single' ? 128 : 120)) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(card.unitPrice, 8) + '</text>';
+  }
+  if (card.validUntil) s += '<text x="' + nX + '" y="' + (yo + 138) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="6">Valid until ' + escSVG(card.validUntil) + '</text>';
+  return s;
+}
+
+// Live-preview React component: four cells stacked & centred on an A4 canvas
+// (identical footprint to the Fresh sheet), with dashed cut-guides and
+// click-to-select overlays. Relies on the document @font-face for on-screen text.
+function ShelfSmSheet({ cards, editIdx, onSelect, fit }) {
+  const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
+  const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
+  const inner = [0, 1, 2, 3].map(i => shelfSmCellSVG(cards[i] || {}, xS, positions[i], false, LOGO_D)).join('');
+  const vCuts =
+    '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
+    '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>';
+  const hCuts = [0, 1, 2, 3, 4].map(i =>
+    '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+  ).join('');
+  const wH = fit ? '100%' : CW, hH = fit ? '100%' : CH;
+  const fullSVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + wH + '" height="' + hH + '" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="xMidYMid meet" style="display:block;background:#fff">' +
+    '<rect width="' + CW + '" height="' + CH + '" fill="#fff"/>' + vCuts + inner + hCuts + '</svg>';
+  return React.createElement('div', { style: { position: 'relative', width: fit ? '100%' : CW, height: fit ? '100%' : CH } },
+    React.createElement('div', { style: { width: '100%', height: '100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
+    onSelect && [0, 1, 2, 3].map(i => React.createElement('div', {
+      key: i,
+      onClick: () => onSelect(i),
+      style: {
+        position: 'absolute',
+        left: (xS / CW * 100) + '%',
+        top: (positions[i] / CH * 100) + '%',
+        width: (FW / CW * 100) + '%',
+        height: (FH / CH * 100) + '%',
+        cursor: 'pointer',
+        outline: editIdx === i ? '3px solid #FEDE00' : '3px solid transparent',
+        boxSizing: 'border-box'
+      }
+    })));
+}
+
 /* ─── App ───────────────────────────────────────────── */
 const lbl = {
   display: "block",
@@ -1062,6 +1187,18 @@ function App() {
     return [0,1,2,3].map(() => ({ ...EMPTY_FRESH }));
   });
   const [editIdxFresh, setEditIdxFresh] = useState(0);
+  const [cardsShelfSm, setCardsShelfSm] = useState(() => {
+    const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+    try {
+      const s = localStorage.getItem('megamarket_cards_shelfsm');
+      if (s) {
+        const p = JSON.parse(s);
+        return [0, 1, 2, 3].map(i => ({ ...mk(), ...(p[i] || {}) }));
+      }
+    } catch (e) {}
+    return [0, 1, 2, 3].map(mk);
+  });
+  const [editIdxShelfSm, setEditIdxShelfSm] = useState(0);
   const [showQueue, setShowQueue] = useState(false);
   const [queue, setQueue] = useState(() => {
     try {
@@ -1124,6 +1261,24 @@ function App() {
       if (andExport && status === 'ready') {
         setTimeout(() => exportPDF('fresh', [item]), 50);
       }
+    } else if (template === 'shelfsm') {
+      if (!canAddShelfSm) return;
+      const firstNamed = cardsShelfSm.find(c => c.productName) || {};
+      const item = {
+        id: Date.now(),
+        type: 'shelfsm',
+        status,
+        name: (firstNamed.productName || 'Untitled'),
+        data: cardsShelfSm.map(c => ({ ...c })),
+        savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      };
+      setQueue(q => [item, ...q]);
+      setCardsShelfSm([0, 1, 2, 3].map(() => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" })));
+      setEditIdxShelfSm(0);
+      showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
+      if (andExport && status === 'ready') {
+        setTimeout(() => exportPDF('shelfsm', [item]), 50);
+      }
     } else {
       var _cards8x4$find;
       if (!canAddSheet) return;
@@ -1177,6 +1332,11 @@ function App() {
         return { ...EMPTY_FRESH, ...c, category: c.category || sheetCat };
       }));
       setEditIdxFresh(0);
+    } else if (item.type === 'shelfsm') {
+      const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+      const src = item.data || [];
+      setCardsShelfSm([0, 1, 2, 3].map(i => ({ ...mk(), ...(src[i] || {}) })));
+      setEditIdxShelfSm(0);
     } else {
       setCards8x4(item.data);
       setEditIdx8x4(0);
@@ -1262,6 +1422,28 @@ function App() {
   const setF = (k, v) => setCardsFresh(prev => prev.map((c, i) => i === editIdxFresh ? { ...c, [k]: v } : c));
   const canAddFresh = cardsFresh.some(c => c.productName && c.nowPrice);
 
+  React.useEffect(() => {
+    try { localStorage.setItem('megamarket_cards_shelfsm', JSON.stringify(cardsShelfSm)); } catch (e) {}
+  }, [cardsShelfSm]);
+  const cardSm = cardsShelfSm[editIdxShelfSm];
+  const setSm = (k, v) => setCardsShelfSm(prev => prev.map((c, i) => {
+    if (i !== editIdxShelfSm) return c;
+    const next = { ...c, [k]: v };
+    if ((k === "size" || k === "nowPrice") && next.priceMode !== "multibuy") {
+      next.unitPrice = calcUnitPrice(k === "size" ? v : next.size, k === "nowPrice" ? v : next.nowPrice);
+    }
+    return next;
+  }));
+  const setTierSm = (ti, v) => setCardsShelfSm(prev => prev.map((c, i) => {
+    if (i !== editIdxShelfSm) return c;
+    const t = [...c.tiers];
+    t[ti] = v;
+    return { ...c, tiers: t };
+  }));
+  const addTierSm = () => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm && c.tiers.length < 4 ? { ...c, tiers: [...c.tiers, ""] } : c));
+  const removeTierSm = ti => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm ? { ...c, tiers: c.tiers.filter((_, j) => j !== ti) } : c));
+  const canAddShelfSm = cardsShelfSm.some(c => c.productName && (c.priceMode === "multibuy" ? (c.tiers[0] || "").trim() : c.priceMode === "wasnow" ? (c.wasPrice && c.nowPrice) : c.nowPrice));
+
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -1270,7 +1452,7 @@ function App() {
 
   // Export blank template
 
-    const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : template === "fresh" ? canAddFresh : cards8x4.some(c => c.productName));
+    const hasUnsaved = queue.length > 0 || (template === "a4" ? !!form.productName : template === "fresh" ? canAddFresh : template === "shelfsm" ? cardsShelfSm.some(c => c.productName) : cards8x4.some(c => c.productName));
   const exportPDF = async (forceTemplate, passedQueue) => {
     if (isExportingRef.current) { showToast("Export already in progress…"); return; }
     if (!window.jspdf) { alert("PDF library not loaded yet — please wait a moment and try again."); return; }
@@ -1410,6 +1592,31 @@ function App() {
       await downloadPDF(pages, 'megamarket-fresh-' + Date.now() + '.pdf');
       setQueue(q => q.filter(i => !(i.type === 'fresh' && i.status === 'ready')));
       showToast('PDF downloaded ✓');
+    } else if (activeTemplate === 'shelfsm') {
+      // ── Shelf 108×72 export (four Fresh-sized talkers per A4 page) ──
+      const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
+      const allSm = liveQueue.filter(q => String(q.type) === 'shelfsm').map(q => q.data);
+      const sheets = allSm.length ? allSm : (!passedQueue && canAddShelfSm ? [cardsShelfSm] : []);
+      if (!sheets.length) { showToast('Add a card first — fill in the form or save to queue'); return; }
+      const pages = sheets.map(sheet => {
+        const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
+        const cells = [0, 1, 2, 3].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], false, logoPath)).join('');
+        const vCuts =
+          '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
+          '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>';
+        const hCuts = [0, 1, 2, 3, 4].map(i =>
+          '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
+        ).join('');
+        const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
+          vCuts + cells + hCuts + '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
+      });
+      await downloadPDF(pages, 'megamarket-shelf108x72-' + Date.now() + '.pdf');
+      setQueue(q => q.filter(i => !(i.type === 'shelfsm' && i.status === 'ready')));
+      showToast('PDF downloaded ✓');
+
     } else {
       // ── 8x4 Shelf Talker export ──
       const all8x4 = liveQueue.filter(q => String(q.type) === "8x4").map(q => q.data);
@@ -1563,6 +1770,21 @@ function App() {
         return { svgString, widthMm: 210, heightMm: 297 };
       });
       await downloadPDF(pages, 'megamarket-a4-textonly-' + Date.now() + '.pdf');
+      showToast('Text-only PDF downloaded ✓');
+    } else if (liveTemplate === 'shelfsm') {
+      const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
+      const allSm = liveQueue.filter(q => q.type === 'shelfsm' && q.status === 'ready').map(q => q.data);
+      const sheets = allSm.length ? allSm : (!passedQueue && canAddShelfSm ? [cardsShelfSm] : []);
+      if (!sheets.length) { showToast('Nothing to export'); return; }
+      const pages = sheets.map(sheet => {
+        const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
+        const cells = [0, 1, 2, 3].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], true, LOGO_D)).join('');
+        const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
+          '<defs><style>' + fontStyle + '</style></defs>' +
+          '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + cells + '</svg>';
+        return { svgString, widthMm: 210, heightMm: 297 };
+      });
+      await downloadPDF(pages, 'megamarket-shelf108x72-textonly-' + Date.now() + '.pdf');
       showToast('Text-only PDF downloaded ✓');
     } else {
       const CW = 420, CH = 148, sideW = 64, xStart = CW - 304;
@@ -1779,6 +2001,22 @@ function App() {
       whiteSpace: "nowrap"
     }
   }, "Shelf 8x4"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setTemplate("shelfsm"); setShowQueue(false); },
+    style: {
+      background: "none",
+      color: template === "shelfsm" && !showQueue ? W : "rgba(255,255,255,0.5)",
+      border: "none",
+      borderBottom: template === "shelfsm" && !showQueue ? `2px solid ${W}` : "2px solid transparent",
+      padding: "8px 12px",
+      fontWeight: 800,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui, sans-serif",
+      whiteSpace: "nowrap"
+    }
+  }, "Shelf 108\xD772"), /*#__PURE__*/React.createElement("button", {
     onClick: () => { setTemplate("fresh"); setShowQueue(false); },
     style: {
       background: "none",
@@ -1998,7 +2236,25 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Shelf (", queueReady.filter(q => q.type === "8x4").length, ")"), queue.filter(q => q.type === "shelfsm").length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTemplate("shelfsm");
+      setShowQueue(false);
+      exportPDF("shelfsm", queue);
+    },
+    style: {
+      background: "#555",
+      color: W,
+      border: "none",
+      padding: "8px 14px",
+      fontWeight: 800,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: "pointer",
+      fontFamily: "system-ui,sans-serif"
+    }
+  }, "\u2399 Shelf 108 (", queueReady.filter(q => q.type === "shelfsm").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       fontFamily: "system-ui,sans-serif",
@@ -2645,7 +2901,71 @@ function App() {
   }, /*#__PURE__*/React.createElement(PriceCard8x4, {
     card: card,
     fit: true
-  }))))))), template === "fresh" && /*#__PURE__*/React.createElement("div", {
+  }))))))), template === "shelfsm" && /*#__PURE__*/React.createElement("div", {
+    style: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }
+  }, /*#__PURE__*/React.createElement("div", { className: "main-row" },
+    /*#__PURE__*/React.createElement("div", { className: "form-pane" },
+      /*#__PURE__*/React.createElement("div", { style: { height: 3, background: Y, marginBottom: 14, borderRadius: 2 } }),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 16 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
+          [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("button", {
+            key: i,
+            onClick: () => setEditIdxShelfSm(i),
+            style: {
+              flex: 1, padding: "8px 0", cursor: "pointer", position: "relative",
+              background: editIdxShelfSm === i ? Y : "#f0f0f0", color: editIdxShelfSm === i ? K : "#555",
+              border: "2px solid #e0e0e0", borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+              fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+            }
+          }, "Card ", i + 1, cardsShelfSm[i] && cardsShelfSm[i].productName && /*#__PURE__*/React.createElement("span", {
+            style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxShelfSm === i ? K : "#4caf50", display: "inline-block" }
+          }))))),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 13 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Product Name *"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. Cypressa Extra Virgin Olive Oil", value: cardSm.productName, onChange: e => setSm("productName", e.target.value) })),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 13 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Size / Weight"),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 5000ml", value: cardSm.size, onChange: e => setSm("size", e.target.value) })),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Price Mode"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
+          [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"]].map(([val, label], i, arr) => /*#__PURE__*/React.createElement("button", {
+            key: val,
+            onClick: () => setSm("priceMode", val),
+            style: {
+              flex: 1, padding: "8px 0", cursor: "pointer",
+              background: cardSm.priceMode === val ? K : "#f0f0f0", color: cardSm.priceMode === val ? W : "#555",
+              border: "2px solid #e0e0e0", borderRight: i < arr.length - 1 ? "none" : "2px solid #e0e0e0",
+              fontWeight: 700, fontSize: 10, letterSpacing: 0.5, fontFamily: "system-ui, sans-serif",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === arr.length - 1 ? "0 3px 3px 0" : "0"
+            }
+          }, label)))),
+      cardSm.priceMode === "single" && /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Price *"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. \xA329.99", value: cardSm.nowPrice, onChange: e => setSm("nowPrice", e.target.value), onBlur: e => setSm("nowPrice", formatPrice(e.target.value)) })),
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Unit Price"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 60p per 100ml", value: cardSm.unitPrice, onChange: e => setSm("unitPrice", e.target.value) }), cardSm.size && cardSm.nowPrice && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#888", marginTop: 3, fontFamily: "system-ui,sans-serif" } }, "auto-calculated \xB7 edit to override"))),
+      cardSm.priceMode === "wasnow" && /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Was Price *"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. \xA334.99", value: cardSm.wasPrice, onChange: e => setSm("wasPrice", e.target.value), onBlur: e => setSm("wasPrice", formatPrice(e.target.value)) })),
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Price *"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. \xA329.99", value: cardSm.nowPrice, onChange: e => setSm("nowPrice", e.target.value), onBlur: e => setSm("nowPrice", formatPrice(e.target.value)) })),
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Unit Price"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 60p per 100ml", value: cardSm.unitPrice, onChange: e => setSm("unitPrice", e.target.value) }), cardSm.size && cardSm.nowPrice && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#888", marginTop: 3, fontFamily: "system-ui,sans-serif" } }, "auto-calculated \xB7 edit to override"))),
+      cardSm.priceMode === "multibuy" && /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Single Price"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. \xA31.99", value: cardSm.nowPrice, onChange: e => setSm("nowPrice", e.target.value), onBlur: e => setSm("nowPrice", formatPrice(e.target.value)) })),
+        /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Multi-Buy Price *"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 for \xA33.00", value: cardSm.tiers[0] || "", onChange: e => setTierSm(0, e.target.value) }))),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Valid Until ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, type: "text", placeholder: "e.g. 30 Apr or 30/04/26", value: cardSm.validUntil || "", onChange: e => setSm("validUntil", e.target.value) })),
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
+        editIdxShelfSm < 3
+          ? /*#__PURE__*/React.createElement("button", { onClick: () => setEditIdxShelfSm(editIdxShelfSm + 1), style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" } }, "Next Card →")
+          : /*#__PURE__*/React.createElement(React.Fragment, null,
+              /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('working'), disabled: !canAddShelfSm, style: { flex: 1, background: canAddShelfSm ? "#333" : "#ddd", color: W, border: "none", padding: "12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "Draft"),
+              /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('ready', true), disabled: !canAddShelfSm, title: "Export immediately (⌘↩)", style: { flex: 1, background: canAddShelfSm ? Y : "#ddd", color: canAddShelfSm ? K : "#aaa", border: "none", padding: "14px", fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "⎙ Export Now"),
+              /*#__PURE__*/React.createElement("button", { onClick: () => exportTextPDF('shelfsm', cardsShelfSm.some(c => c.productName) ? [{ type: 'shelfsm', status: 'ready', data: cardsShelfSm }] : []), disabled: !canAddShelfSm, title: "Export text only — no colour ink", style: { background: canAddShelfSm ? "#fff" : "#ddd", color: canAddShelfSm ? "#000" : "#aaa", border: canAddShelfSm ? "1.5px solid #000" : "1.5px solid #ddd", padding: "14px 10px", fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" } }, "Text Only")))),
+    /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } }, "Shelf Talker \xB7 108\xD772mm \xB7 4 per A4"),
+      /*#__PURE__*/React.createElement("div", { style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" } },
+        /*#__PURE__*/React.createElement(ShelfSmSheet, { cards: cardsShelfSm, editIdx: editIdxShelfSm, onSelect: setEditIdxShelfSm, fit: true }))))), template === "fresh" && /*#__PURE__*/React.createElement("div", {
     style: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }
   }, /*#__PURE__*/React.createElement("div", { className: "main-row" },
     /*#__PURE__*/React.createElement("div", { className: "form-pane" },
