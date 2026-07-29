@@ -1033,6 +1033,9 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath) {
 
   let s = '';
   s += '<rect x="' + xo + '" y="' + yo + '" width="' + CELL_W + '" height="' + CELL_H + '" fill="white"/>';
+  // Empty slot → blank cell (no branded bar, no "0.00" placeholder).
+  const filled = !!(card.productName || card.nowPrice || card.wasPrice || (card.tiers || []).some(t => t && t.trim()));
+  if (!filled) return s;
   if (!textOnly) {
     s += '<rect x="' + xo + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>';
     s += '<rect x="' + xo + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + redH + '" fill="#CC2222"/>';
@@ -1075,7 +1078,7 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath) {
   } else {
     if (card.wasPrice && card.priceMode === 'wasnow') s += '<text x="' + pR + '" y="' + (yo + 72) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="15" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>';
     const heroFs = card.priceMode === 'single' ? 34 : 28;
-    s += '<text x="' + pR + '" y="' + (yo + 108) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">' + (card.nowPrice ? pricesToTspans(card.nowPrice, heroFs) : '<tspan fill="#ddd">0.00</tspan>') + '</text>';
+    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 108) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">' + pricesToTspans(card.nowPrice, heroFs) + '</text>';
     if (card.unitPrice) s += '<text x="' + pR + '" y="' + (yo + (card.priceMode === 'single' ? 128 : 120)) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(card.unitPrice, 8) + '</text>';
   }
   if (card.validUntil) s += '<text x="' + nX + '" y="' + (yo + 138) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="6">Valid until ' + escSVG(card.validUntil) + '</text>';
