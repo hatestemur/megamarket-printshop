@@ -161,8 +161,9 @@ async function downloadPDF(cardSVGs, filename) {
       widthMm,
       heightMm
     } = cardSVGs[i];
-    // Rasterise SVG via canvas
-    const scale = 3; // 3x resolution for crisp output
+    // Rasterise SVG via canvas. 4x ≈ 384 dpi; going higher would exceed the
+    // ~16.7M-pixel canvas cap Safari enforces on an A4 page.
+    const scale = 4;
     const pxW = Math.round(widthMm * 3.7795275591 * scale);
     const pxH = Math.round(heightMm * 3.7795275591 * scale);
     const canvas = document.createElement("canvas");
@@ -185,7 +186,11 @@ async function downloadPDF(cardSVGs, filename) {
       img.onerror = reject;
       img.src = url;
     });
-    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, widthMm, heightMm);
+    // PNG, not JPEG: these pages are hard-edged black text and flat colour
+    // blocks — exactly what JPEG's DCT smears into ringing and colour fringes
+    // around the letters and panel edges. PNG is lossless and, on flat art like
+    // this, usually no larger.
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, widthMm, heightMm);
   }
   pdf.save(filename);
 }
@@ -295,6 +300,7 @@ const Y = "#FEDE00";
 const K = "#000000";
 const W = "#FFFFFF";
 const R = "#CC2222";
+const T = "#0b6e4f"; // teal — "NEW" badge panel on the 107×78 shelf talker
 const EMPTY = {
   productName: "",
   size: "",
@@ -352,7 +358,7 @@ const BANNER_BLOBS = [
 ];
 
 
-/* ─── Rasterize one texture SVG to a small JPEG dataURL ──
+/* ─── Rasterize one texture SVG to a small PNG dataURL ──
    Cached on the texture object (._png) so subsequent calls return
    immediately. Concurrent callers share the same in-flight Promise
    via ._pendingPng. Returns null when TEXTURE_DATA isn't loaded or
@@ -377,7 +383,9 @@ function ensureTexturePNG(key) {
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, targetW, targetH);
         ctx.drawImage(img, 0, 0, targetW, targetH);
-        tex._png = canvas.toDataURL('image/jpeg', 0.85);
+        // PNG, not JPEG: this gets baked into the page SVG before the PDF
+        // rasterises it, so a lossy banner would survive the lossless export.
+        tex._png = canvas.toDataURL('image/png');
         cleanup();
         resolve(tex._png);
       } catch (e) { cleanup(); reject(e); }
@@ -397,23 +405,25 @@ function ensureTexturePNG(key) {
 function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const yo = (yOffset != null) ? yOffset : ci * FH;
   const cx = xS + FW / 2;
-  const bannerH = 32;  // 16mm — tighter for 4-per-A4
+  const bannerH = 32;  // 16mm — unchanged by the 3-per-A4 resize, so the banner
+                       // keeps its physical depth and the extra card height all
+                       // goes to the text block below it.
 
   // Banner: prefer a real texture when one is loaded for this category,
   // else fall back to procedural blobs. Nested <svg> uses preserveAspectRatio
   // "slice" to cover-fit the source texture into the banner viewport.
   // IDs inside the texture (masks etc.) must be namespaced per card —
-  // otherwise the same id appears 3× when 3 cards share a category and
-  // the SVG fails to parse as an Image.
+  // otherwise the same id appears three times when every card on the sheet
+  // shares a category and the SVG fails to parse as an Image.
   let banner;
   const tex = (typeof window !== 'undefined' && window.TEXTURE_DATA && cat.key) ? window.TEXTURE_DATA[cat.key] : null;
   if (tex && tex._png) {
-    // Fast path: the texture has been rasterised to a small JPEG at startup.
-    // 4 cards on a sheet inline 4 copies of this JPEG (≈80KB each, vs 5MB+ of
-    // raw SVG path data) so the export SVG stays small enough to load.
+    // Fast path: the texture has been rasterised to a small PNG at startup.
+    // A full sheet inlines one copy per card (≈80KB each, vs 5MB+ of raw SVG
+    // path data) so the export SVG stays small enough to load.
     banner = '<image x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + bannerH + '" preserveAspectRatio="xMidYMid slice" href="' + tex._png + '"/>';
   } else if (tex) {
-    // Slow path used before the JPEG cache is ready (preview only).
+    // Slow path used before the PNG cache is ready (preview only).
     const idPrefix = 'tex' + cat.key + '_c' + ci + '_';
     const inner = tex.inner
       .replace(/id="([^"]+)"/g, 'id="' + idPrefix + '$1"')
@@ -508,20 +518,22 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   );
 }
 
-/* ─── Sheet geometry constants: 4 cards per A4 portrait ─── */
-const FRESH_SHEET = { CW: 420, CH: 594, FW: 216, FH: 144, xS: 102, yTop: 10, gap: 0 };
+/* ─── Sheet geometry constants: 3 cards per A4 portrait ──
+   107×78mm at 2 units/mm, centred on the sheet — same cell as the
+   Shelf 107×78 talker so both stacks cut on matching guides. */
+const FRESH_SHEET = { CW: 420, CH: 594, FW: 214, FH: 156, xS: (420 - 214) / 2, yTop: Math.round((594 - 3 * 156) / 2), gap: 0 };
 
-/* ─── React component: render full Fresh sheet (4 cards) ─── */
+/* ─── React component: render full Fresh sheet (3 cards) ─── */
 function FreshSheet({ cards, editIdx, onSelect, fit }) {
   const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
-  const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
-  const svgInner = cards.slice(0, 4).map((card, i) => {
+  const positions = [0, 1, 2].map(i => yTop + i * (FH + gap));
+  const svgInner = cards.slice(0, 3).map((card, i) => {
     const cat = CATEGORIES[card.category] || CATEGORIES['fruit-veg'];
     return freshCardSVG(card, cat, i, FW, FH, xS, positions[i]);
   }).join('');
   // Single horizontal cut-guides between cards — extended full sheet width
   // so the cut path is continuous edge-to-edge.
-  const hCuts = [0, 1, 2, 3, 4].map(i =>
+  const hCuts = [0, 1, 2, 3].map(i =>
     '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
   ).join('');
   const wH = fit ? '100%' : CW;
@@ -535,7 +547,7 @@ function FreshSheet({ cards, editIdx, onSelect, fit }) {
     svgInner + hCuts + '</svg>';
   return React.createElement('div', { style: { position:'relative', width: fit?'100%':CW, height: fit?'100%':CH } },
     React.createElement('div', { style: { width:'100%', height:'100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
-    onSelect && [0,1,2,3].map(i => React.createElement('div', {
+    onSelect && [0,1,2].map(i => React.createElement('div', {
       key: i,
       onClick: () => onSelect(i),
       style: {
@@ -992,7 +1004,7 @@ function PriceCard8x4({
   }, ...pricesToReactChildren(card.unitPrice, 10)) : null));
 }
 
-/* ─── Shelf 108×72: 8×4-style talker at Fresh size (4 per A4) ──── */
+/* ─── Shelf 107×78: 8×4-style talker, 3 per A4 ──── */
 // Full logo path (outer wedge + "M" cut-out), shared by preview + export.
 const LOGO_D = "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z";
 
@@ -1014,47 +1026,72 @@ function mmWrap(text, maxW, fontSize, fontWeight) {
   return lines;
 }
 
-// One shelf-talker cell (216×144 = 108×72mm) as an SVG string, positioned at
-// (xo, yo). Uses <text> (not foreignObject) so it renders in both the live
-// preview and the rasterised PDF export. Same design as the 8×4 talker,
-// re-fitted to the smaller Fresh-sized cell.
-function shelfSmCellSVG(card, xo, yo, textOnly, logoPath) {
+// Largest font size at which `text` still fits `maxW`, measured in the real
+// face rather than guessed from an em estimate. Measures once at 100px and
+// scales, since advance widths are linear in font size.
+function mmFitFs(text, maxW, fontWeight, minFs, maxFs) {
+  if (!_mmWrapCtx) _mmWrapCtx = document.createElement('canvas').getContext('2d');
+  _mmWrapCtx.font = (fontWeight || '500') + ' 100px MadaniArabic, sans-serif';
+  const w = _mmWrapCtx.measureText(text || '').width / 100;
+  if (!w) return maxFs;
+  return Math.max(minFs, Math.min(maxFs, Math.floor(maxW / w)));
+}
+
+// One shelf-talker cell (214×156 = 107×78mm at 2 units/mm) as an SVG string,
+// positioned at (xo, yo). Uses <text> (not foreignObject) so it renders in both
+// the live preview and the rasterised PDF export. Same design as the 8×4 talker,
+// re-fitted to this cell.
+function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
   card = ucCard(card || {});
-  const CELL_W = 216, CELL_H = 144, sideW = 52;
+  const CELL_W = 214, CELL_H = 156, sideW = 52;
   const logoBotR = Math.round(800 * sideW / 607.7); // ≈68 — black block bottom
-  const redH = CELL_H - logoBotR;                    // ≈76
+  const redH = CELL_H - logoBotR;                    // ≈88 — badge panel
   const scaleX = (sideW / 607.7).toFixed(5);
   const nX = xo + sideW + 10;   // text left edge
   const pR = xo + CELL_W - 10;  // price right edge
+  // Badge panel: "SPECIAL OFFER" on red (default) or a single large "NEW" on teal.
+  const isNew = card.badgeType === 'new';
+  const panelBg = isNew ? T : R;
   const badge = "SPECIAL OFFER";
   const longest = Math.max.apply(null, badge.split(" ").map(w => w.length));
   const badgeFs = Math.max(8, Math.min(11, Math.floor((sideW - 8) / (longest * 0.6))));
-  const badgeFill = textOnly ? "#000" : "#FEDE00";
+  // "NEW" is one short word, so it can fill the panel width — measured to fit
+  // inside the 4-unit side padding, clamped so it stays sane either way.
+  const newFs = mmFitFs('NEW', sideW - 8, '700', 10, 26);
+  const badgeFill = textOnly ? "#000" : (isNew ? "#FFFFFF" : "#FEDE00");
 
   let s = '';
   s += '<rect x="' + xo + '" y="' + yo + '" width="' + CELL_W + '" height="' + CELL_H + '" fill="white"/>';
-  // Empty slot → blank cell (no branded bar, no "0.00" placeholder).
+  // Empty slot → blank cell in exports (no branded bar, no "0.00" placeholder);
+  // the live preview always shows the design with gray placeholders, like 8x4.
   const filled = !!(card.productName || card.nowPrice || card.wasPrice || (card.tiers || []).some(t => t && t.trim()));
-  if (!filled) return s;
+  if (!filled && !preview) return s;
   if (!textOnly) {
     s += '<rect x="' + xo + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>';
-    s += '<rect x="' + xo + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + redH + '" fill="#CC2222"/>';
+    s += '<rect x="' + xo + '" y="' + (yo + logoBotR) + '" width="' + sideW + '" height="' + redH + '" fill="' + panelBg + '"/>';
     s += '<g transform="translate(' + xo + ',' + yo + ') scale(' + scaleX + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>';
   }
-  s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.42) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">SPECIAL</text>';
-  s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.66) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">OFFER</text>';
+  if (isNew) {
+    // Single line, optically centred in the panel (baseline ≈ mid + 0.35em).
+    s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.5 + newFs * 0.35) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + newFs + '" letter-spacing="-0.2">NEW</text>';
+  } else {
+    s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.42) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">SPECIAL</text>';
+    s += '<text x="' + (xo + sideW / 2) + '" y="' + (yo + logoBotR + redH * 0.66) + '" text-anchor="middle" fill="' + badgeFill + '" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFs + '" letter-spacing="0.4">OFFER</text>';
+  }
 
-  // Product name (word-wrapped) + size
-  const nL = (card.productName || '').length;
+  // Product name (word-wrapped) + size — gray placeholder in preview
+  const nameSrc = card.productName || (preview ? 'Product Name' : '');
+  const nameFill = card.productName ? '#000' : '#ccc';
+  const nL = nameSrc.length;
   const nameFs = nL > 32 ? 10 : nL > 20 ? 11 : nL > 12 ? 12 : 14;
   const nameLH = Math.round(nameFs * 1.15);
-  const lines = mmWrap(card.productName || '', pR - nX, nameFs, '500');
+  const lines = mmWrap(nameSrc, pR - nX, nameFs, '500');
   s += lines.map((ln, i) =>
-    '<text x="' + nX + '" y="' + (yo + 6 + nameFs + i * nameLH) + '" fill="#000" font-family="MadaniArabic" font-weight="500" font-size="' + nameFs + '" letter-spacing="-0.2">' + pricesToTspans(ln, nameFs) + '</text>'
+    '<text x="' + nX + '" y="' + (yo + 6 + nameFs + i * nameLH) + '" fill="' + nameFill + '" font-family="MadaniArabic" font-weight="500" font-size="' + nameFs + '" letter-spacing="-0.2">' + pricesToTspans(ln, nameFs) + '</text>'
   ).join('');
   const nameBlockH = nameFs + (lines.length - 1) * nameLH;
   if (card.size) {
-    const sizeY = Math.min(yo + 66, yo + 6 + nameBlockH + 2 + 9);
+    const sizeY = Math.min(yo + 72, yo + 6 + nameBlockH + 2 + 9);
     s += '<text x="' + nX + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="9">' + pricesToTspans(card.size, 9) + '</text>';
   }
 
@@ -1068,34 +1105,35 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath) {
     const smallFs = Math.min(n === 1 ? 34 : n === 2 ? 18 : n === 3 ? 15 : 12, Math.floor(capFs * 0.7));
     const ys = []; let acc = 0;
     tiers.forEach((_, i) => { const fs = i === n - 1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
-    const startY = (yo + 110) - acc;
-    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 54) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="13">' + pricesToTspans(card.nowPrice, 13) + '</text>';
+    const startY = (yo + 119) - acc;
+    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 59) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="13">' + pricesToTspans(card.nowPrice, 13) + '</text>';
     tiers.forEach((tier, i) => {
       const fs = i === n - 1 ? lastFs : smallFs;
       s += '<text x="' + pR + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.4">' + pricesToTspans(tier, fs) + '</text>';
-      if (i === n - 1) { const each = parseTierEach(tier); if (each) s += '<text x="' + pR + '" y="' + (yo + 124) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(each, 8) + '</text>'; }
+      if (i === n - 1) { const each = parseTierEach(tier); if (each) s += '<text x="' + pR + '" y="' + (yo + 134) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(each, 8) + '</text>'; }
     });
   } else {
-    if (card.wasPrice && card.priceMode === 'wasnow') s += '<text x="' + pR + '" y="' + (yo + 72) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="15" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>';
+    if (card.wasPrice && card.priceMode === 'wasnow') s += '<text x="' + pR + '" y="' + (yo + 78) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="15" text-decoration="line-through">' + escSVG(card.wasPrice) + '</text>';
     const heroFs = card.priceMode === 'single' ? 34 : 28;
-    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 108) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">' + pricesToTspans(card.nowPrice, heroFs) + '</text>';
-    if (card.unitPrice) s += '<text x="' + pR + '" y="' + (yo + (card.priceMode === 'single' ? 128 : 120)) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(card.unitPrice, 8) + '</text>';
+    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 117) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">' + pricesToTspans(card.nowPrice, heroFs) + '</text>';
+    else if (preview) s += '<text x="' + pR + '" y="' + (yo + 117) + '" text-anchor="end" fill="#ddd" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">0.00</text>';
+    if (card.unitPrice) s += '<text x="' + pR + '" y="' + (yo + (card.priceMode === 'single' ? 139 : 130)) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(card.unitPrice, 8) + '</text>';
   }
-  if (card.validUntil) s += '<text x="' + nX + '" y="' + (yo + 138) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="6">Valid until ' + escSVG(card.validUntil) + '</text>';
+  if (card.validUntil) s += '<text x="' + nX + '" y="' + (yo + 150) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="6">Valid until ' + escSVG(card.validUntil) + '</text>';
   return s;
 }
 
-// Live-preview React component: four cells stacked & centred on an A4 canvas
-// (identical footprint to the Fresh sheet), with dashed cut-guides and
-// click-to-select overlays. Relies on the document @font-face for on-screen text.
+// Live-preview React component: three cells stacked & centred on an A4 canvas,
+// with dashed cut-guides and click-to-select overlays. Relies on the document
+// @font-face for on-screen text.
 function ShelfSmSheet({ cards, editIdx, onSelect, fit }) {
-  const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
-  const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
-  const inner = [0, 1, 2, 3].map(i => shelfSmCellSVG(cards[i] || {}, xS, positions[i], false, LOGO_D)).join('');
+  const CW = 420, CH = 594, FW = 214, FH = 156, xS = (CW - FW) / 2, yTop = Math.round((CH - 3 * FH) / 2);
+  const positions = [0, 1, 2].map(i => yTop + i * FH);
+  const inner = [0, 1, 2].map(i => shelfSmCellSVG(cards[i] || {}, xS, positions[i], false, LOGO_D, true)).join('');
   const vCuts =
     '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
     '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>';
-  const hCuts = [0, 1, 2, 3, 4].map(i =>
+  const hCuts = [0, 1, 2, 3].map(i =>
     '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
   ).join('');
   const wH = fit ? '100%' : CW, hH = fit ? '100%' : CH;
@@ -1104,7 +1142,7 @@ function ShelfSmSheet({ cards, editIdx, onSelect, fit }) {
     '<rect width="' + CW + '" height="' + CH + '" fill="#fff"/>' + vCuts + inner + hCuts + '</svg>';
   return React.createElement('div', { style: { position: 'relative', width: fit ? '100%' : CW, height: fit ? '100%' : CH } },
     React.createElement('div', { style: { width: '100%', height: '100%' }, dangerouslySetInnerHTML: { __html: fullSVG } }),
-    onSelect && [0, 1, 2, 3].map(i => React.createElement('div', {
+    onSelect && [0, 1, 2].map(i => React.createElement('div', {
       key: i,
       onClick: () => onSelect(i),
       style: {
@@ -1184,22 +1222,22 @@ function App() {
       if (s) {
         const parsed = JSON.parse(s);
         // Normalise to 3 cards (truncate or pad)
-        return [0,1,2,3].map(i => parsed[i] ? { ...EMPTY_FRESH, ...parsed[i] } : { ...EMPTY_FRESH });
+        return [0,1,2].map(i => parsed[i] ? { ...EMPTY_FRESH, ...parsed[i] } : { ...EMPTY_FRESH });
       }
     } catch (e) {}
-    return [0,1,2,3].map(() => ({ ...EMPTY_FRESH }));
+    return [0,1,2].map(() => ({ ...EMPTY_FRESH }));
   });
   const [editIdxFresh, setEditIdxFresh] = useState(0);
   const [cardsShelfSm, setCardsShelfSm] = useState(() => {
-    const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+    const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
     try {
       const s = localStorage.getItem('megamarket_cards_shelfsm');
       if (s) {
         const p = JSON.parse(s);
-        return [0, 1, 2, 3].map(i => ({ ...mk(), ...(p[i] || {}) }));
+        return [0, 1, 2].map(i => ({ ...mk(), ...(p[i] || {}) }));
       }
     } catch (e) {}
-    return [0, 1, 2, 3].map(mk);
+    return [0, 1, 2].map(mk);
   });
   const [editIdxShelfSm, setEditIdxShelfSm] = useState(0);
   const [showQueue, setShowQueue] = useState(false);
@@ -1258,7 +1296,7 @@ function App() {
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       };
       setQueue(q => [item, ...q]);
-      setCardsFresh([0,1,2,3].map(() => ({ ...EMPTY_FRESH })));
+      setCardsFresh([0,1,2].map(() => ({ ...EMPTY_FRESH })));
       setEditIdxFresh(0);
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
@@ -1276,7 +1314,7 @@ function App() {
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       };
       setQueue(q => [item, ...q]);
-      setCardsShelfSm([0, 1, 2, 3].map(() => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" })));
+      setCardsShelfSm([0, 1, 2].map(() => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" })));
       setEditIdxShelfSm(0);
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
@@ -1330,15 +1368,15 @@ function App() {
       const src = d.cards || [];
       // Legacy items had a single sheet-level d.category; promote it onto any card that doesn't carry its own.
       const sheetCat = d.category || 'fruit-veg';
-      setCardsFresh([0,1,2,3].map(i => {
+      setCardsFresh([0,1,2].map(i => {
         const c = src[i] || {};
         return { ...EMPTY_FRESH, ...c, category: c.category || sheetCat };
       }));
       setEditIdxFresh(0);
     } else if (item.type === 'shelfsm') {
-      const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+      const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
       const src = item.data || [];
-      setCardsShelfSm([0, 1, 2, 3].map(i => ({ ...mk(), ...(src[i] || {}) })));
+      setCardsShelfSm([0, 1, 2].map(i => ({ ...mk(), ...(src[i] || {}) })));
       setEditIdxShelfSm(0);
     } else {
       setCards8x4(item.data);
@@ -1445,7 +1483,8 @@ function App() {
   }));
   const addTierSm = () => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm && c.tiers.length < 4 ? { ...c, tiers: [...c.tiers, ""] } : c));
   const removeTierSm = ti => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm ? { ...c, tiers: c.tiers.filter((_, j) => j !== ti) } : c));
-  const canAddShelfSm = cardsShelfSm.some(c => c.productName && (c.priceMode === "multibuy" ? (c.tiers[0] || "").trim() : c.priceMode === "wasnow" ? (c.wasPrice && c.nowPrice) : c.nowPrice));
+  // A "NEW" talker can be a name-only flag, so it doesn't need a price to export.
+  const canAddShelfSm = cardsShelfSm.some(c => c.productName && (c.badgeType === "new" || (c.priceMode === "multibuy" ? (c.tiers[0] || "").trim() : c.priceMode === "wasnow" ? (c.wasPrice && c.nowPrice) : c.nowPrice)));
 
   const showToast = msg => {
     setToast(msg);
@@ -1559,7 +1598,7 @@ function App() {
         : (canAddFresh ? [{ cards: cardsFresh }] : []);
       if (!sheets.length) { showToast('Nothing to export'); return; }
       // Make sure every category used on these sheets has been rasterised to
-      // a JPEG before we build the export SVG. Without this, freshCardSVG
+      // a PNG before we build the export SVG. Without this, freshCardSVG
       // falls back to inlining megabytes of SVG path data per card and the
       // <img> loader for the assembled sheet silently dies ([object Event]).
       const usedKeys = new Set();
@@ -1573,13 +1612,13 @@ function App() {
         return;
       }
       const { CW, CH, FW, FH, xS, yTop, gap } = FRESH_SHEET;
-      const positions = [0, 1, 2, 3].map(i => yTop + i * (FH + gap));
-      const hCuts = [0, 1, 2, 3, 4].map(i =>
+      const positions = [0, 1, 2].map(i => yTop + i * (FH + gap));
+      const hCuts = [0, 1, 2, 3].map(i =>
         '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
       ).join('');
       const pages = sheets.map(sheet => {
         // Per-card category; fall back to sheet.category (legacy queue items) then fruit-veg.
-        const svgRows = sheet.cards.slice(0, 4).map((card, ci) => {
+        const svgRows = sheet.cards.slice(0, 3).map((card, ci) => {
           const catKey = card.category || sheet.category || 'fruit-veg';
           const cat = CATEGORIES[catKey] || CATEGORIES['fruit-veg'];
           return freshCardSVG(card, cat, ci, FW, FH, xS, positions[ci]);
@@ -1596,18 +1635,18 @@ function App() {
       setQueue(q => q.filter(i => !(i.type === 'fresh' && i.status === 'ready')));
       showToast('PDF downloaded ✓');
     } else if (activeTemplate === 'shelfsm') {
-      // ── Shelf 108×72 export (four Fresh-sized talkers per A4 page) ──
-      const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
+      // ── Shelf 107×78 export (three talkers per A4 page) ──
+      const CW = 420, CH = 594, FW = 214, FH = 156, xS = (CW - FW) / 2, yTop = Math.round((CH - 3 * FH) / 2);
       const allSm = liveQueue.filter(q => String(q.type) === 'shelfsm').map(q => q.data);
       const sheets = allSm.length ? allSm : (!passedQueue && canAddShelfSm ? [cardsShelfSm] : []);
       if (!sheets.length) { showToast('Add a card first — fill in the form or save to queue'); return; }
       const pages = sheets.map(sheet => {
-        const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
-        const cells = [0, 1, 2, 3].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], false, logoPath)).join('');
+        const positions = [0, 1, 2].map(i => yTop + i * FH);
+        const cells = [0, 1, 2].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], false, logoPath)).join('');
         const vCuts =
           '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
           '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>';
-        const hCuts = [0, 1, 2, 3, 4].map(i =>
+        const hCuts = [0, 1, 2, 3].map(i =>
           '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
         ).join('');
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
@@ -1616,7 +1655,7 @@ function App() {
           vCuts + cells + hCuts + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
-      await downloadPDF(pages, 'megamarket-shelf108x72-' + Date.now() + '.pdf');
+      await downloadPDF(pages, 'megamarket-shelf107x78-' + Date.now() + '.pdf');
       setQueue(q => q.filter(i => !(i.type === 'shelfsm' && i.status === 'ready')));
       showToast('PDF downloaded ✓');
 
@@ -1775,19 +1814,19 @@ function App() {
       await downloadPDF(pages, 'megamarket-a4-textonly-' + Date.now() + '.pdf');
       showToast('Text-only PDF downloaded ✓');
     } else if (liveTemplate === 'shelfsm') {
-      const CW = 420, CH = 594, FW = 216, FH = 144, xS = 102, yTop = 10;
+      const CW = 420, CH = 594, FW = 214, FH = 156, xS = (CW - FW) / 2, yTop = Math.round((CH - 3 * FH) / 2);
       const allSm = liveQueue.filter(q => q.type === 'shelfsm' && q.status === 'ready').map(q => q.data);
       const sheets = allSm.length ? allSm : (!passedQueue && canAddShelfSm ? [cardsShelfSm] : []);
       if (!sheets.length) { showToast('Nothing to export'); return; }
       const pages = sheets.map(sheet => {
-        const positions = [0, 1, 2, 3].map(i => yTop + i * FH);
-        const cells = [0, 1, 2, 3].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], true, LOGO_D)).join('');
+        const positions = [0, 1, 2].map(i => yTop + i * FH);
+        const cells = [0, 1, 2].map(i => shelfSmCellSVG((sheet && sheet[i]) || {}, xS, positions[i], true, LOGO_D)).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' + cells + '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
-      await downloadPDF(pages, 'megamarket-shelf108x72-textonly-' + Date.now() + '.pdf');
+      await downloadPDF(pages, 'megamarket-shelf107x78-textonly-' + Date.now() + '.pdf');
       showToast('Text-only PDF downloaded ✓');
     } else {
       const CW = 420, CH = 148, sideW = 64, xStart = CW - 304;
@@ -2019,7 +2058,7 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, "Shelf 108\xD772"), /*#__PURE__*/React.createElement("button", {
+  }, "Shelf 107\xD778"), /*#__PURE__*/React.createElement("button", {
     onClick: () => { setTemplate("fresh"); setShowQueue(false); },
     style: {
       background: "none",
@@ -2257,7 +2296,7 @@ function App() {
       cursor: "pointer",
       fontFamily: "system-ui,sans-serif"
     }
-  }, "\u2399 Shelf 108 (", queueReady.filter(q => q.type === "shelfsm").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "\u2399 Shelf 107 (", queueReady.filter(q => q.type === "shelfsm").length, ")"))), queueReady.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       fontFamily: "system-ui,sans-serif",
@@ -2912,15 +2951,15 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 16 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
-          [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("button", {
+          [0, 1, 2].map(i => /*#__PURE__*/React.createElement("button", {
             key: i,
             onClick: () => setEditIdxShelfSm(i),
             style: {
               flex: 1, padding: "8px 0", cursor: "pointer", position: "relative",
               background: editIdxShelfSm === i ? Y : "#f0f0f0", color: editIdxShelfSm === i ? K : "#555",
-              border: "2px solid #e0e0e0", borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+              border: "2px solid #e0e0e0", borderRight: i < 2 ? "none" : "2px solid #e0e0e0",
               fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
-              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0"
             }
           }, "Card ", i + 1, cardsShelfSm[i] && cardsShelfSm[i].productName && /*#__PURE__*/React.createElement("span", {
             style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxShelfSm === i ? K : "#4caf50", display: "inline-block" }
@@ -2931,6 +2970,21 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 13 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Size / Weight"),
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 5000ml", value: cardSm.size, onChange: e => setSm("size", e.target.value) })),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Badge"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
+          [["offer", "Special Offer", R], ["new", "New", T]].map(([val, label, col], i, arr) => /*#__PURE__*/React.createElement("button", {
+            key: val,
+            onClick: () => setSm("badgeType", val),
+            style: {
+              flex: 1, padding: "8px 0", cursor: "pointer",
+              background: (cardSm.badgeType || "offer") === val ? col : "#f0f0f0",
+              color: (cardSm.badgeType || "offer") === val ? W : "#555",
+              border: "2px solid #e0e0e0", borderRight: i < arr.length - 1 ? "none" : "2px solid #e0e0e0",
+              fontWeight: 700, fontSize: 10, letterSpacing: 0.5, textTransform: "uppercase", fontFamily: "system-ui, sans-serif",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === arr.length - 1 ? "0 3px 3px 0" : "0"
+            }
+          }, label)))),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Price Mode"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
@@ -2959,14 +3013,14 @@ function App() {
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Valid Until ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
         /*#__PURE__*/React.createElement("input", { style: inp, type: "text", placeholder: "e.g. 30 Apr or 30/04/26", value: cardSm.validUntil || "", onChange: e => setSm("validUntil", e.target.value) })),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
-        editIdxShelfSm < 3
+        editIdxShelfSm < 2
           ? /*#__PURE__*/React.createElement("button", { onClick: () => setEditIdxShelfSm(editIdxShelfSm + 1), style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" } }, "Next Card →")
           : /*#__PURE__*/React.createElement(React.Fragment, null,
               /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('working'), disabled: !canAddShelfSm, style: { flex: 1, background: canAddShelfSm ? "#333" : "#ddd", color: W, border: "none", padding: "12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "Draft"),
               /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('ready', true), disabled: !canAddShelfSm, title: "Export immediately (⌘↩)", style: { flex: 1, background: canAddShelfSm ? Y : "#ddd", color: canAddShelfSm ? K : "#aaa", border: "none", padding: "14px", fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "⎙ Export Now"),
               /*#__PURE__*/React.createElement("button", { onClick: () => exportTextPDF('shelfsm', cardsShelfSm.some(c => c.productName) ? [{ type: 'shelfsm', status: 'ready', data: cardsShelfSm }] : []), disabled: !canAddShelfSm, title: "Export text only — no colour ink", style: { background: canAddShelfSm ? "#fff" : "#ddd", color: canAddShelfSm ? "#000" : "#aaa", border: canAddShelfSm ? "1.5px solid #000" : "1.5px solid #ddd", padding: "14px 10px", fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" } }, "Text Only")))),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
-      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } }, "Shelf Talker \xB7 108\xD772mm \xB7 4 per A4"),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } }, "Shelf Talker \xB7 107\xD778mm \xB7 3 per A4"),
       /*#__PURE__*/React.createElement("div", { style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" } },
         /*#__PURE__*/React.createElement(ShelfSmSheet, { cards: cardsShelfSm, editIdx: editIdxShelfSm, onSelect: setEditIdxShelfSm, fit: true }))))), template === "fresh" && /*#__PURE__*/React.createElement("div", {
     style: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }
@@ -2976,7 +3030,7 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Editing"),
         /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
-          [0,1,2,3].map(i => /*#__PURE__*/React.createElement("button", {
+          [0,1,2].map(i => /*#__PURE__*/React.createElement("button", {
             key: i,
             onClick: () => setEditIdxFresh(i),
             style: {
@@ -2984,9 +3038,9 @@ function App() {
               background: editIdxFresh === i ? Y : "#f0f0f0",
               color: editIdxFresh === i ? K : "#555",
               border: "2px solid #e0e0e0",
-              borderRight: i < 3 ? "none" : "2px solid #e0e0e0",
+              borderRight: i < 2 ? "none" : "2px solid #e0e0e0",
               fontWeight: 700, fontSize: 11, fontFamily: "system-ui, sans-serif",
-              borderRadius: i === 0 ? "3px 0 0 3px" : i === 3 ? "0 3px 3px 0" : "0"
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0"
             }
           }, "Card ", i + 1, cardsFresh[i] && cardsFresh[i].productName && /*#__PURE__*/React.createElement("span", {
             style: { position: "absolute", top: 3, right: 4, width: 5, height: 5, borderRadius: "50%", background: editIdxFresh === i ? K : "#4caf50", display: "inline-block" }
@@ -3063,7 +3117,7 @@ function App() {
         )
       ),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
-        editIdxFresh < 3
+        editIdxFresh < 2
           ? /*#__PURE__*/React.createElement("button", {
               onClick: () => setEditIdxFresh(editIdxFresh + 1),
               style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" }
@@ -3084,7 +3138,7 @@ function App() {
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
-        "Fresh · 108×72mm · 4 per sheet (mix categories on one sheet)"),
+        "Fresh · 107×78mm · 3 per sheet (mix categories on one sheet)"),
       /*#__PURE__*/React.createElement("div", {
         style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" }
       }, /*#__PURE__*/React.createElement(FreshSheet, { cards: cardsFresh, editIdx: editIdxFresh, onSelect: setEditIdxFresh, fit: true }))
