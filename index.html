@@ -1133,8 +1133,10 @@ function ShelfSmSheet({ cards, editIdx, onSelect, fit }) {
   const vCuts =
     '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>' +
     '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>';
+  // Horizontal guides run the full sheet width, not just the card edges, so the
+  // cut is one continuous edge-to-edge path on the guillotine — same as Fresh.
   const hCuts = [0, 1, 2, 3].map(i =>
-    '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
+    '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#cfd8e0" stroke-width="0.6" stroke-dasharray="5,4"/>'
   ).join('');
   const wH = fit ? '100%' : CW, hH = fit ? '100%' : CH;
   const fullSVG =
@@ -1647,7 +1649,7 @@ function App() {
           '<line x1="' + xS + '" y1="0" x2="' + xS + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>' +
           '<line x1="' + (xS + FW) + '" y1="0" x2="' + (xS + FW) + '" y2="' + CH + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>';
         const hCuts = [0, 1, 2, 3].map(i =>
-          '<line x1="' + xS + '" y1="' + (yTop + i * FH) + '" x2="' + (xS + FW) + '" y2="' + (yTop + i * FH) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
+          '<line x1="0" y1="' + (yTop + i * FH) + '" x2="' + CW + '" y2="' + (yTop + i * FH) + '" stroke="#bbb" stroke-width="0.7" stroke-dasharray="6,4"/>'
         ).join('');
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
