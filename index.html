@@ -1110,7 +1110,11 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
     const ys = []; let acc = 0;
     tiers.forEach((_, i) => { const fs = i === n - 1 ? lastFs : smallFs; ys.push(acc + fs); acc += fs + 3; });
     const startY = (yBot - 37) - acc;
-    if (card.nowPrice) s += '<text x="' + pR + '" y="' + (yo + 59) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="13">' + pricesToTspans(card.nowPrice, 13) + '</text>';
+    // The single price belongs with the tier block, not stranded under the name:
+    // hang it just above the first tier, and only fall back to the fixed top
+    // position when a tall tier stack would otherwise push it into the name.
+    const nowY = Math.max(yo + 59, startY - 12);
+    if (card.nowPrice) s += '<text x="' + pR + '" y="' + nowY + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="13">' + pricesToTspans(card.nowPrice, 13) + '</text>';
     tiers.forEach((tier, i) => {
       const fs = i === n - 1 ? lastFs : smallFs;
       s += '<text x="' + pR + '" y="' + (startY + ys[i]) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + fs + '" letter-spacing="-0.4">' + pricesToTspans(tier, fs) + '</text>';
