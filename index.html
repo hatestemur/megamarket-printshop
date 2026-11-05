@@ -1220,18 +1220,21 @@ const BUDG = {
   wide: {
     type: 'budgwide', label: 'Budgens Wide', tab: 'Budgens Wide',
     store: 'megamarket_cards_budgwide', file: 'wide',
+    pick: 'Wide',
     W: 420, H: 180, per: 3, layout: 'split', cuts: true,
     blurb: 'Budgens Wide · 210×90mm · 3 per A4'
   },
   narrow: {
     type: 'budgnarrow', label: 'Budgens Narrow', tab: 'Budgens Narrow',
     store: 'megamarket_cards_budgnarrow', file: 'narrow',
+    pick: 'Narrow',
     W: 260, H: 150, per: 3, layout: 'split', cuts: true,
     blurb: 'Budgens Narrow · 130×75mm · 3 per A4'
   },
   stack: {
     type: 'budgstack', label: 'Budgens A4 Stack', tab: 'Budgens A4 Stack',
     store: 'megamarket_cards_budgstack', file: 'stack',
+    pick: 'A4 Stack',
     W: 420, H: 594, per: 1, layout: 'stack', cuts: false,
     blurb: 'Budgens A4 Stack · 210×297mm · 1 per sheet'
   }
@@ -1531,7 +1534,7 @@ const queueTypeLabel = t => t === 'a4' ? 'Promotional Card' : (isBudgT(t) ? BUDG
 // three: the only differences are the slot count and the preview blurb, both
 // read off BUDG.
 function BudgEditor(props) {
-  const { kind, cards, editIdx, canAdd, onSelect, setField, setTier, onDraft, onExportNow, onTextOnly } = props;
+  const { kind, cards, editIdx, canAdd, onSelect, onKind, setField, setTier, onDraft, onExportNow, onTextOnly } = props;
   const cfg = BUDG[kind];
   const card = cards[editIdx] || budgEmptyCard();
   const per = cfg.per;
@@ -1548,6 +1551,21 @@ function BudgEditor(props) {
   return React.createElement('div', { className: 'main-row' },
     React.createElement('div', { className: 'form-pane' },
       React.createElement('div', { style: { height: 3, background: BUDG_PINK, marginBottom: 14, borderRadius: 2 } }),
+      React.createElement('div', { style: { marginBottom: 16 } },
+        React.createElement('label', { style: lbl }, 'Size'),
+        React.createElement('div', { style: { display: 'flex' } },
+          BUDG_ORDER.map((k, i) => React.createElement('button', {
+            key: k,
+            onClick: () => onKind(k),
+            style: {
+              flex: 1, padding: '8px 2px', cursor: 'pointer',
+              background: kind === k ? BUDG_PINK : '#f0f0f0', color: kind === k ? W : '#555',
+              border: '2px solid #e0e0e0', borderRight: i < BUDG_ORDER.length - 1 ? 'none' : '2px solid #e0e0e0',
+              fontWeight: 700, fontSize: 10, letterSpacing: 0.3, textTransform: 'uppercase',
+              fontFamily: 'system-ui, sans-serif',
+              borderRadius: i === 0 ? '3px 0 0 3px' : i === BUDG_ORDER.length - 1 ? '0 3px 3px 0' : '0'
+            }
+          }, BUDG[k].pick)))),
       per > 1 && React.createElement('div', { style: { marginBottom: 16 } },
         React.createElement('label', { style: lbl }, 'Editing'),
         React.createElement('div', { style: { display: 'flex' } },
@@ -1987,7 +2005,15 @@ function App() {
       try { localStorage.setItem(BUDG[k].store, JSON.stringify(budgCards[k])); } catch (e) {}
     });
   }, [budgCards]);
-  const budgKind = budgKindOf(template) || 'wide';
+  // The three Budgens sizes share one tab, so remember which one was last
+  // open — that is what the tab button reopens on, and what the size picker
+  // inside the panel switches between.
+  const [budgLastKind, setBudgLastKind] = useState('wide');
+  React.useEffect(() => {
+    const k = budgKindOf(template);
+    if (k && k !== budgLastKind) setBudgLastKind(k);
+  }, [template]);
+  const budgKind = budgKindOf(template) || budgLastKind;
   const budgList = budgCards[budgKind];
   const budgEditIdx = budgIdx[budgKind];
   const setBudgIdxFor = (kind, i) => setBudgIdx(prev => ({ ...prev, [kind]: i }));
@@ -2622,14 +2648,13 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, "Fresh"), BUDG_ORDER.map(k => /*#__PURE__*/React.createElement("button", {
-    key: BUDG[k].type,
-    onClick: () => { setTemplate(BUDG[k].type); setShowQueue(false); },
+  }, "Fresh"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => { setTemplate(BUDG[budgLastKind].type); setShowQueue(false); },
     style: {
       background: "none",
-      color: template === BUDG[k].type && !showQueue ? W : "rgba(255,255,255,0.5)",
+      color: isBudgT(template) && !showQueue ? W : "rgba(255,255,255,0.5)",
       border: "none",
-      borderBottom: template === BUDG[k].type && !showQueue ? `2px solid ${W}` : "2px solid transparent",
+      borderBottom: isBudgT(template) && !showQueue ? `2px solid ${W}` : "2px solid transparent",
       padding: "8px 12px",
       fontWeight: 800,
       fontSize: 10,
@@ -2639,7 +2664,7 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, BUDG[k].tab)),
+  }, "Budgens"),
   /*#__PURE__*/React.createElement("div", {
     style: { flex: 1 }
   }), queue.length > 0 && /*#__PURE__*/React.createElement("button", {
@@ -3536,6 +3561,7 @@ function App() {
     editIdx: budgEditIdx,
     canAdd: canAddBudg,
     onSelect: i => setBudgIdxFor(budgKind, i),
+    onKind: k => setTemplate(BUDG[k].type),
     setField: setBudg,
     setTier: setBudgTier,
     onDraft: () => addToQueue('working'),
