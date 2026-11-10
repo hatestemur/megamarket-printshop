@@ -307,6 +307,68 @@ const K = "#000000";
 const W = "#FFFFFF";
 const R = "#CC2222";
 const T = "#0b6e4f"; // teal — "NEW" badge panel on the 107×80 shelf talker
+const HALAL_GREEN = "#0b6e4f"; // same green as the NEW panel — one accent, used twice
+
+/* ─── Halal mark ──────────────────────────────────────────────
+   Drawn from primitives instead of dropped in as a logo file. The exporter
+   rasterises each sheet by loading the SVG string through a blob-URL <img>,
+   and that <img> refuses to fetch external images — so anything that has to
+   survive export must be shapes and text. Same reason the brand "m." lives on
+   as the LOGO_D path rather than a PNG.
+
+   One emitter serves all five templates, so the preview and the print can't
+   drift apart. Returns an SVG string; the two React-built templates (A4, 8×4)
+   inject it through a <g dangerouslySetInnerHTML>.
+
+   mono = the text-only export, which prints black ink onto pre-printed stock:
+   the pill drops its fill and becomes line art so it reads without colour.
+
+   A pill rather than a roundel because the free space these five layouts have
+   left over is horizontal: a thin strip beside a price or under a name. A disc
+   big enough to read would not clear a full-width multibuy tier on the 8×4 or
+   the 107×80, where the price block already spans the whole card.
+
+   Geometry is all derived from w, so one call fits any template. HALAL_ADV and
+   HALAL_ADV_AR are the two words' advance widths per 1pt of font size, taken
+   from MadaniArabic Bold — the font does carry Arabic, so حلال sets in the
+   brand face rather than falling back. */
+const HALAL_ADV_AR = 1.928;  // حلال
+const HALAL_ADV = 3.185;     // HALAL
+const HALAL_AR_SCALE = 1.18; // Arabic set a touch larger so the two words balance
+const HALAL_RATIO = 0.26;    // height as a fraction of width
+function halalMarkSVG(cx, cy, w, mono) {
+  const h = w * HALAL_RATIO;
+  const x = cx - w / 2, y = cy - h / 2;
+  const sw = Math.max(0.5, h * 0.09);
+  const face = mono ? "none" : HALAL_GREEN;
+  const ink = mono ? "#000000" : "#ffffff";
+  // Pad 8% each end, 6% between the two words — leaves 78% for the glyphs.
+  const fs = (w * 0.78) / (HALAL_ADV_AR * HALAL_AR_SCALE + HALAL_ADV);
+  const latinX = x + w * 0.14 + HALAL_ADV_AR * HALAL_AR_SCALE * fs;
+  const base = y + h * 0.74;
+  // The outline is what separates the mark from whatever sits behind it: white
+  // on the colour sheets (reads over white paper, the Fresh photo banner and
+  // the Budgens sage green alike), black when it is line art.
+  return (
+    '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + w.toFixed(2) + '" height="' + h.toFixed(2) +
+      '" rx="' + (h / 2).toFixed(2) + '" fill="' + face + '" stroke="' + ink + '" stroke-width="' + sw.toFixed(2) + '"/>' +
+    // Two text runs, not one string: mixing RTL and LTR in a single run leaves
+    // the order up to the bidi algorithm, and it must be the same every time.
+    // No letter-spacing on the Arabic either — it would break the cursive joins.
+    '<text x="' + (x + w * 0.08).toFixed(2) + '" y="' + base.toFixed(2) + '" fill="' + ink +
+      '" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + (fs * HALAL_AR_SCALE).toFixed(2) +
+      '">حلال</text>' +
+    '<text x="' + latinX.toFixed(2) + '" y="' + base.toFixed(2) + '" fill="' + ink +
+      '" font-family="MadaniArabic, sans-serif" font-weight="700" font-size="' + fs.toFixed(2) + '">HALAL</text>'
+  );
+}
+// React wrapper for the two templates whose preview is built with createElement.
+function HalalMark({ cx, cy, w, mono }) {
+  return /*#__PURE__*/React.createElement("g", {
+    dangerouslySetInnerHTML: { __html: halalMarkSVG(cx, cy, w, mono) }
+  });
+}
+
 const EMPTY = {
   productName: "",
   size: "",
@@ -318,7 +380,8 @@ const EMPTY = {
   badgeFg: K,
   priceMode: "single",
   tiers: ["", ""],
-  validUntil: ""
+  validUntil: "",
+  halal: false
 };
 
 /* ─── Fresh-section categories (Fruit & Veg, butcher cuts) ── */
@@ -333,7 +396,7 @@ const CATEGORIES = {
   'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each', specialOffer:false };
+const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each', specialOffer:false, halal:false };
 const PRICE_UNITS = {
   'each':     { label: 'Each',     display: 'EACH' },
   'per-kg':   { label: 'Per kg',   display: 'PER KG' },
@@ -518,9 +581,13 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
       'fill="#ffffff" letter-spacing="1">SPECIAL OFFER</text>';
   }
 
+  // Halal mark rides on the banner, clear of the centred fields below and of
+  // the ribbon's corner. White outline keeps it legible over any texture.
+  const halal = card.halal ? halalMarkSVG(xS + FW - 36, yo + bannerH / 2, 56, false) : '';
+
   return (
     '<rect x="' + xS + '" y="' + yo + '" width="' + FW + '" height="' + FH + '" fill="#ffffff"/>' +
-    banner + fieldsSVG + ribbon
+    banner + fieldsSVG + ribbon + halal
   );
 }
 
@@ -766,7 +833,11 @@ function PriceCard({
     fontFamily: FONT,
     fontWeight: "400",
     fontSize: "9"
-  }, "Valid until ", card.validUntil));
+  }, "Valid until ", card.validUntil), card.halal && /*#__PURE__*/React.createElement(HalalMark, {
+    cx: sideW + 18 + 65,
+    cy: 240,
+    w: 130
+  }));
 }
 
 /* ─── Price Card 8×4 SVG (4 per A4 sheet) ──────────── */
@@ -872,8 +943,12 @@ function PriceCard8x4({
     fontWeight: "700",
     fontSize: badgeFontSize,
     letterSpacing: "0.44"
-  }, "OFFER"), card.validUntil && /*#__PURE__*/React.createElement("text", {
-    x: xStart + sideW + 12,
+  }, "OFFER"), card.halal && /*#__PURE__*/React.createElement(HalalMark, {
+    cx: xStart + sideW + 12 + 24,
+    cy: 137,
+    w: 48
+  }), card.validUntil && /*#__PURE__*/React.createElement("text", {
+    x: xStart + sideW + 12 + (card.halal ? 54 : 0),
     y: 142,
     textAnchor: "start",
     fill: "#000",
@@ -1133,6 +1208,10 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
     else if (preview) s += '<text x="' + pR + '" y="' + (yBot - 39) + '" text-anchor="end" fill="#ddd" font-family="MadaniArabic" font-weight="700" font-size="' + heroFs + '" letter-spacing="-0.6">0.00</text>';
     if (card.unitPrice) s += '<text x="' + pR + '" y="' + (yo + (CELL_H - (card.priceMode === 'single' ? 17 : 26))) + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-weight="400" font-size="8">' + pricesToTspans(card.unitPrice, 8) + '</text>';
   }
+  // Halal mark: the strip under the price block and above the valid-until line
+  // is the one band no price mode reaches, since every price here is
+  // right-aligned and the deepest baseline is yBot-37.
+  if (card.halal) s += halalMarkSVG(nX + 23, yBot - 22, 46, textOnly);
   if (card.validUntil) s += '<text x="' + nX + '" y="' + (yBot - 6) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="6">Valid until ' + escSVG(card.validUntil) + '</text>';
   return s;
 }
@@ -1242,7 +1321,7 @@ const BUDG = {
 const BUDG_ORDER = ['wide', 'narrow', 'stack'];
 const budgKindOf = t => t === 'budgwide' ? 'wide' : t === 'budgnarrow' ? 'narrow' : t === 'budgstack' ? 'stack' : null;
 const isBudgT = t => !!budgKindOf(t);
-const budgEmptyCard = () => ({ productName: '', size: '', wasPrice: '', nowPrice: '', unitPrice: '', priceMode: 'single', tiers: ['', ''], validUntil: '' });
+const budgEmptyCard = () => ({ productName: '', size: '', wasPrice: '', nowPrice: '', unitPrice: '', priceMode: 'single', tiers: ['', ''], validUntil: '', halal: false });
 const budgCardFilled = c => !!(c && (c.productName || c.nowPrice || c.wasPrice || (c.tiers || []).some(t => t && t.trim())));
 const budgCardReady = c => !!(c && c.productName && (c.priceMode === 'multibuy'
   ? ((c.tiers || [])[0] || '').trim()
@@ -1376,6 +1455,7 @@ function budgSplitSVG(card, xo, yo, cfg, textOnly, preview) {
     s += budgText(gcx, cur + it.fs * 0.8, 'MadaniArabic', it.w, it.fs, it.fill, it.t, '', it.sx);
     cur += it.lh;
   });
+  if (card.halal) s += halalMarkSVG(gcx, yo + H * 0.86, half * 0.42, textOnly);
   return s;
 }
 
@@ -1455,6 +1535,10 @@ function budgStackSVG(card, xo, yo, cfg, textOnly, preview) {
     s += budgText(cx, cur + it.fs * 0.8, 'MadaniArabic', it.w, it.fs, it.fill, it.t, '', it.sx);
     cur += it.lh;
   });
+  if (card.halal) {
+    const hw = cardW * 0.28;
+    s += halalMarkSVG(cx, y0 + cardH - hw * 0.21, hw, textOnly);
+  }
   return s;
 }
 
@@ -1613,6 +1697,7 @@ function BudgEditor(props) {
       React.createElement('div', { style: { marginBottom: 18 } },
         React.createElement('label', { style: lbl }, 'Valid Until ', React.createElement('span', { style: { fontWeight: 400, fontSize: 10 } }, '(optional)')),
         React.createElement('input', { style: inp, type: 'text', placeholder: 'e.g. 30 Apr or 30/04/26', value: card.validUntil || '', onChange: e => setField('validUntil', e.target.value) })),
+      React.createElement(HalalField, { value: card.halal, onChange: v => setField('halal', v) }),
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 4 } },
         editIdx < per - 1
           ? React.createElement('button', { onClick: () => onSelect(editIdx + 1), style: { flex: 1, background: '#f0f0f0', color: '#555', border: 'none', padding: '12px', fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' } }, 'Next Card →')
@@ -1647,6 +1732,30 @@ const inp = {
   outline: "none",
   boxSizing: "border-box"
 };
+
+/* One control, five editors. The mark is opt-in per card and defaults to off:
+   a halal mark on a product that is not halal is a far worse failure than a
+   missing one, so it is never inherited from a default or a previous card. */
+function HalalField({ value, onChange }) {
+  return /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
+    /*#__PURE__*/React.createElement("label", { style: lbl }, "Halal Mark"),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 6 } },
+      [["yes", true], ["no", false]].map(([lab, val]) => /*#__PURE__*/React.createElement("button", {
+        key: lab,
+        onClick: () => onChange(val),
+        style: {
+          flex: 1, padding: "8px 0",
+          background: !!value === val ? (val ? HALAL_GREEN : K) : "#f0f0f0",
+          color: !!value === val ? W : "#555",
+          border: !!value === val ? "2px solid " + (val ? HALAL_GREEN : K) : "2px solid #e0e0e0",
+          borderRadius: 4, fontWeight: 700, fontSize: 11, textTransform: "uppercase",
+          letterSpacing: 1, cursor: "pointer", fontFamily: "system-ui, sans-serif"
+        }
+      }, val ? "Yes" : "No"))
+    )
+  );
+}
+
 function App() {
   const [texTick, bumpTex] = useState(0);
   React.useEffect(() => {
@@ -1680,7 +1789,8 @@ function App() {
       badgeFg: K,
       priceMode: "single",
       tiers: ["", ""],
-      validUntil: ""
+      validUntil: "",
+      halal: false
     }));
   });
   const [editIdx8x4, setEditIdx8x4] = useState(0);
@@ -1697,7 +1807,7 @@ function App() {
   });
   const [editIdxFresh, setEditIdxFresh] = useState(0);
   const [cardsShelfSm, setCardsShelfSm] = useState(() => {
-    const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+    const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "", halal: false });
     try {
       const s = localStorage.getItem('megamarket_cards_shelfsm');
       if (s) {
@@ -1803,7 +1913,7 @@ function App() {
         savedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       };
       setQueue(q => [item, ...q]);
-      setCardsShelfSm([0, 1, 2].map(() => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" })));
+      setCardsShelfSm([0, 1, 2].map(() => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "", halal: false })));
       setEditIdxShelfSm(0);
       showToast(status === 'ready' ? (andExport ? 'Exporting…' : 'Added to Ready ✓') : 'Saved to Working ✓');
       if (andExport && status === 'ready') {
@@ -1883,7 +1993,7 @@ function App() {
       }));
       setEditIdxFresh(0);
     } else if (item.type === 'shelfsm') {
-      const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "" });
+      const mk = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "", badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""], validUntil: "", halal: false });
       const src = item.data || [];
       setCardsShelfSm([0, 1, 2].map(i => ({ ...mk(), ...(src[i] || {}) })));
       setEditIdxShelfSm(0);
@@ -2131,6 +2241,7 @@ function App() {
           sizeText + priceSVG(card) +
           '<rect x="0" y="' + (CH-badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' +
           '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + pricesToTspans(badge, badgeFontSize) + '</text>' +
+          (card.halal ? halalMarkSVG(sideW + 18 + 65, 240, 130, false) : '') +
           (card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + escSVG(card.validUntil) + '</text>' : '') +
           '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
@@ -2270,7 +2381,8 @@ function App() {
             const unitLine = card.unitPrice ? '<text x="' + (CW-14) + '" y="' + unitY + '" text-anchor="end" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.unitPrice, 10) + '</text>' : '';
             priceLines8 = wasLine + nowLine + unitLine;
           }
-          const validLine = card.validUntil ? '<text x="' + (xStart+sideW+12) + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
+          const halalLine = card.halal ? halalMarkSVG(xStart + sideW + 12 + 24, yo + 137, 48, false) : '';
+          const validLine = card.validUntil ? '<text x="' + (xStart+sideW+12+(card.halal?54:0)) + '" y="' + (yo+142) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="7">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
           return '<rect x="' + xStart + '" y="' + yo + '" width="' + CARD_W + '" height="' + CH + '" fill="white"/>' +
             '<rect x="' + xStart + '" y="' + yo + '" width="' + sideW + '" height="' + logoBotR + '" fill="#000"/>' +
             '<rect x="' + xStart + '" y="' + (yo+logoBotR) + '" width="' + sideW + '" height="' + (CH-logoBotR) + '" fill="#CC2222"/>' +
@@ -2279,7 +2391,7 @@ function App() {
             '<text x="' + (xStart+sideW/2) + '" y="' + (yo+logoBotR+(CH-logoBotR)*0.67) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="0.44">OFFER</text>' +
             nameTextSVG8 +
             (card.size ? '<text x="' + _8nX + '" y="' + sizeY8 + '" fill="#000" font-family="MadaniArabic" font-size="10">' + pricesToTspans(card.size, 10) + '</text>' : '') +
-            priceLines8 + validLine +
+            priceLines8 + halalLine + validLine +
             (ci < 3 ? '<line x1="' + xStart + '" y1="' + (yo+CH) + '" x2="' + CW + '" y2="' + (yo+CH) + '" stroke="#ddd" stroke-width="0.5"/>' : '');
         }).join('');
         const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + CW + '" height="' + (CH*4) + '" viewBox="0 0 ' + CW + ' ' + (CH*4) + '">' +
@@ -2365,10 +2477,11 @@ function App() {
           priceText = wasLine + nowLine + unitLine;
         }
         const validText = card.validUntil ? '<text x="' + (sideW+18) + '" y="488" text-anchor="start" fill="#000" font-family="MadaniArabic" font-size="9">Valid until ' + escSVG(card.validUntil) + '</text>' : '';
+        const halalText = card.halal ? halalMarkSVG(sideW + 18 + 65, 240, 130, true) : '';
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
-          nameTextSVG + sizeText + priceText + validText +
+          nameTextSVG + sizeText + priceText + halalText + validText +
           '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
@@ -3136,7 +3249,10 @@ function App() {
     placeholder: "e.g. 30 Apr or 30/04/26",
     value: form.validUntil,
     onChange: e => set("validUntil", e.target.value)
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(HalalField, {
+    value: form.halal,
+    onChange: v => set("halal", v)
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8
@@ -3447,7 +3563,10 @@ function App() {
     placeholder: "e.g. 30 Apr or 30/04/26",
     value: card8.validUntil || "",
     onChange: e => set8("validUntil", e.target.value)
-  })), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(HalalField, {
+    value: card8.halal,
+    onChange: v => set8("halal", v)
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
@@ -3642,6 +3761,7 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Valid Until ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
         /*#__PURE__*/React.createElement("input", { style: inp, type: "text", placeholder: "e.g. 30 Apr or 30/04/26", value: cardSm.validUntil || "", onChange: e => setSm("validUntil", e.target.value) })),
+      /*#__PURE__*/React.createElement(HalalField, { value: cardSm.halal, onChange: v => setSm("halal", v) }),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
         editIdxShelfSm < 2
           ? /*#__PURE__*/React.createElement("button", { onClick: () => setEditIdxShelfSm(editIdxShelfSm + 1), style: { flex: 1, background: "#f0f0f0", color: "#555", border: "none", padding: "12px", fontWeight: 800, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "system-ui, sans-serif" } }, "Next Card →")
@@ -3746,6 +3866,7 @@ function App() {
           }, val ? "Yes — add red ribbon" : "No"))
         )
       ),
+      /*#__PURE__*/React.createElement(HalalField, { value: cardF.halal, onChange: v => setF('halal', v) }),
       /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
         editIdxFresh < 2
           ? /*#__PURE__*/React.createElement("button", {
