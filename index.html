@@ -403,7 +403,7 @@ function boxPriceLayout(card, maxW, maxFs, preview) {
   const capMax = Math.max(6, Math.round(maxFs * 0.26));
   const capFs = Math.min.apply(null, rows.map(r => mmFitFs(r.cap, maxW * 0.46, '600', 6, capMax)).concat([capMax]));
   const capW = Math.max.apply(null, rows.map(r => mmWidth(r.cap, capFs, '600', 'MadaniArabic')));
-  const gap = Math.max(5, Math.round(capFs * 0.6));
+  const gap = Math.max(6, Math.round(maxW * 0.05));
   const priceW = Math.max(12, maxW - capW - gap);
   const fs = Math.min.apply(null, rows.map(r => mmFitFs(r.txt, priceW, '700', 8, maxFs)).concat([maxFs]));
   // The pair is set flush right as one block, not spread across the whole
@@ -421,7 +421,7 @@ function boxPriceSVG(card, xR, anchorY, maxW, maxFs, preview) {
   const xL = xR - L.blockW;
   return L.rows.map((r, i) => {
     const y = anchorY - (L.rows.length - 1 - i) * L.adv;
-    return '<text x="' + xL + '" y="' + (y - Math.round(L.fs * 0.06)) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-weight="600" font-size="' + L.capFs + '" letter-spacing="0.4">' + escSVG(r.cap) + '</text>' +
+    return '<text x="' + xL + '" y="' + y + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-weight="600" font-size="' + L.capFs + '" letter-spacing="0.4">' + escSVG(r.cap) + '</text>' +
       '<text x="' + xR + '" y="' + y + '" text-anchor="end" fill="' + (r.ghost ? '#ddd' : '#000') + '" font-family="MadaniArabic" font-weight="700" font-size="' + L.fs + '" letter-spacing="-0.4">' + pricesToTspans(r.txt, L.fs) + '</text>';
   }).join('');
 }
@@ -455,7 +455,7 @@ function BoxPriceBlock({ card, xR, anchorY, maxW, maxFs, preview }) {
     const y = anchorY - (L.rows.length - 1 - i) * L.adv;
     return /*#__PURE__*/React.createElement(React.Fragment, { key: i },
       /*#__PURE__*/React.createElement("text", {
-        x: xL, y: y - Math.round(L.fs * 0.06), textAnchor: "start", fill: "#000",
+        x: xL, y: y, textAnchor: "start", fill: "#000",
         fontFamily: "'MadaniArabic', sans-serif", fontWeight: "600", fontSize: L.capFs, letterSpacing: "0.4"
       }, r.cap),
       /*#__PURE__*/React.createElement("text", {
