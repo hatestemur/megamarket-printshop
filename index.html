@@ -229,6 +229,8 @@ function ucCard(card) {
     wasPrice:      _ucP(card.wasPrice),
     unitPrice:     _ucP(card.unitPrice),
     multibuyPrice: _ucP(card.multibuyPrice),
+    boxPrice:      _ucP(card.boxPrice),
+    boxQty:        _uc(card.boxQty),
     tiers: Array.isArray(card.tiers) ? card.tiers.map(_ucP) : card.tiers
   });
 }
@@ -369,6 +371,100 @@ function HalalMark({ cx, cy, w, mono }) {
   });
 }
 
+/* ─── "Each + Box" price block ───────────────────────
+   Fruit and veg that sells loose and by the box needs both prices on the one
+   card, and a box price says nothing without the quantity it covers. Two
+   right-aligned lines, each carrying its caption at the left of its own
+   baseline, bottom-anchored where the single hero price would have sat:
+
+       EACH         £0.45
+       BOX OF 60   £18.99
+
+   One layout function and two renderers — an SVG string for the export paths,
+   React nodes for the A4 and 8×4 live previews — so the screen and the print
+   cannot drift apart. Every size is fitted to the column the caller owns, so
+   the same block serves the A4 sheet and the 107×80 shelf talker alike. */
+const boxCaptionText = card => {
+  const qty = String((card && card.boxQty) || '').trim();
+  return qty ? 'BOX OF ' + qty.toUpperCase() : 'PER BOX';
+};
+// A box-mode card is only worth exporting once both prices are in.
+const boxPriceReady = card => !!(card && String(card.nowPrice || '').trim() && String(card.boxPrice || '').trim());
+
+// Captions are fixed text, so they are fitted first and the prices take the
+// rest of the column. Both lines share one caption size and one price size:
+// two different sizes would read as two different offers.
+function boxPriceLayout(card, maxW, maxFs, preview) {
+  const rows = [
+    { cap: 'EACH', txt: String((card && card.nowPrice) || '').trim() },
+    { cap: boxCaptionText(card), txt: String((card && card.boxPrice) || '').trim() }
+  ].filter(r => r.txt || preview).map(r => ({ cap: r.cap, txt: r.txt || '0.00', ghost: !r.txt }));
+  if (!rows.length) return null;
+  const capMax = Math.max(6, Math.round(maxFs * 0.3));
+  const capFs = Math.min.apply(null, rows.map(r => mmFitFs(r.cap, maxW * 0.46, '700', 6, capMax)).concat([capMax]));
+  const capW = Math.max.apply(null, rows.map(r => mmWidth(r.cap, capFs, '700', 'MadaniArabic')));
+  const gap = Math.max(6, capFs);
+  const priceW = Math.max(12, maxW - capW - gap);
+  const fs = Math.min.apply(null, rows.map(r => mmFitFs(r.txt, priceW, '700', 8, maxFs)).concat([maxFs]));
+  // The pair is set flush right as one block, not spread across the whole
+  // column: on the shelf talkers the left of that column belongs to the
+  // product name and the size line, and a caption parked there collides.
+  const blockW = Math.min(maxW, capW + gap + Math.max.apply(null, rows.map(r => mmWidth(r.txt, fs, '700', 'MadaniArabic'))));
+  return { rows, capFs, fs, blockW, adv: Math.round(fs * 1.16) };
+}
+
+// xR is the right edge of the price column, anchorY the baseline of the last
+// line — the same anchor the hero price uses, so nothing else has to move.
+function boxPriceSVG(card, xR, anchorY, maxW, maxFs, preview) {
+  const L = boxPriceLayout(card, maxW, maxFs, preview);
+  if (!L) return '';
+  const xL = xR - L.blockW;
+  return L.rows.map((r, i) => {
+    const y = anchorY - (L.rows.length - 1 - i) * L.adv;
+    return '<text x="' + xL + '" y="' + (y - Math.round(L.fs * 0.06)) + '" text-anchor="start" fill="#000" font-family="MadaniArabic" font-weight="700" font-size="' + L.capFs + '" letter-spacing="0.4">' + escSVG(r.cap) + '</text>' +
+      '<text x="' + xR + '" y="' + y + '" text-anchor="end" fill="' + (r.ghost ? '#ddd' : '#000') + '" font-family="MadaniArabic" font-weight="700" font-size="' + L.fs + '" letter-spacing="-0.4">' + pricesToTspans(r.txt, L.fs) + '</text>';
+  }).join('');
+}
+
+// The four price modes, in one place: three editors render the same picker.
+const PRICE_MODES = [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"], ["box", "Each + Box"]];
+
+// The inputs Each + Box needs, shared by every editor that offers the mode.
+// `lbl`, `inp` and formatPrice are module-level and only read at render time.
+function BoxPriceFields({ card, set }) {
+  const f = (label, key, placeholder, price, hint) => /*#__PURE__*/React.createElement("div", null,
+    /*#__PURE__*/React.createElement("label", { style: lbl }, label),
+    /*#__PURE__*/React.createElement("input", {
+      style: inp, placeholder, value: card[key] || "",
+      onChange: e => set(key, e.target.value),
+      onBlur: price ? (e => set(key, formatPrice(e.target.value))) : undefined
+    }),
+    hint && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#888", marginTop: 3, fontFamily: "system-ui,sans-serif" } }, hint));
+  return /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
+    f("Single Price *", "nowPrice", "e.g. \u00a31.49", true),
+    f("Box Price *", "boxPrice", "e.g. \u00a318.99", true),
+    f("Quantity in Box", "boxQty", "e.g. 60", false, "shown as \u201c" + boxCaptionText(card) + "\u201d beside the box price"));
+}
+
+// Same block for the two templates whose preview is built with createElement.
+function BoxPriceBlock({ card, xR, anchorY, maxW, maxFs, preview }) {
+  const L = boxPriceLayout(card, maxW, maxFs, preview);
+  if (!L) return null;
+  const xL = xR - L.blockW;
+  return /*#__PURE__*/React.createElement(React.Fragment, null, L.rows.map((r, i) => {
+    const y = anchorY - (L.rows.length - 1 - i) * L.adv;
+    return /*#__PURE__*/React.createElement(React.Fragment, { key: i },
+      /*#__PURE__*/React.createElement("text", {
+        x: xL, y: y - Math.round(L.fs * 0.06), textAnchor: "start", fill: "#000",
+        fontFamily: "'MadaniArabic', sans-serif", fontWeight: "700", fontSize: L.capFs, letterSpacing: "0.4"
+      }, r.cap),
+      /*#__PURE__*/React.createElement("text", {
+        x: xR, y: y, textAnchor: "end", fill: r.ghost ? "#ddd" : "#000",
+        fontFamily: "'MadaniArabic', sans-serif", fontWeight: "700", fontSize: L.fs, letterSpacing: "-0.4"
+      }, ...pricesToReactChildren(r.txt, L.fs)));
+  }));
+}
+
 const EMPTY = {
   productName: "",
   size: "",
@@ -380,6 +476,8 @@ const EMPTY = {
   badgeFg: K,
   priceMode: "single",
   tiers: ["", ""],
+  boxPrice: "",
+  boxQty: "",
   validUntil: "",
   halal: false
 };
@@ -396,7 +494,7 @@ const CATEGORIES = {
   'fish':      { key: 'fish',      label: 'Fish',        color: '#36a4c9', darkColor: '#15536a' }
 };
 const FRESH_ORDER = ['fruit-veg','chicken','beef','lamb','rabbit','duck','turkey','fish'];
-const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', category:'fruit-veg', priceUnit:'each', specialOffer:false, halal:false };
+const EMPTY_FRESH = { productName:'', variety:'', origin:'', nowPrice:'', multibuyPrice:'', boxPrice:'', boxQty:'', category:'fruit-veg', priceUnit:'each', specialOffer:false, halal:false };
 const PRICE_UNITS = {
   'each':     { label: 'Each',     display: 'EACH' },
   'per-kg':   { label: 'Per kg',   display: 'PER KG' },
@@ -523,9 +621,16 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   const ucPrice = s => String(s).toUpperCase().replace(/(\d)P\b/g, '$1p');
   const heroText = hasMulti ? ucPrice(card.multibuyPrice) : (hasNow ? ucPrice(card.nowPrice) : '');
   const subText = hasNow ? (hasMulti ? ucPrice(card.nowPrice) + ' ' + unitDisplay : unitDisplay) : '';
+  // Sold by the box as well as singly: one extra line, quantity and all, so
+  // the box price is never read as the price of one.
+  const hasBox = !!(card.boxPrice && String(card.boxPrice).trim());
+  const boxText = hasBox ? boxCaptionText(card) + '  ' + ucPrice(card.boxPrice) : '';
   const origin = (card.origin || '').toUpperCase();
 
   const nameFS = 16, heroFS = 44, subFS = 16, originFS = 13;
+  // The box line is one long run of text — caption, quantity and price — so it
+  // is fitted to the card rather than allowed to overhang the trim.
+  const boxFS = boxText ? mmFitFs(boxText, FW * 0.88, '600', 10, 19) : 19;
   // Switched off MadaniArabic for card text: it only ships 400 + 700 weights,
   // so every value between snapped to one of those two. The system sans-serif
   // chain (Helvetica Neue Light / SF Pro Light on Apple, Segoe / Roboto Light
@@ -539,6 +644,9 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   // Origin sits between the variety and the hero, smaller and lighter so the eye
   // reads it as provenance metadata rather than a headline.
   const originAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="200" font-size="' + originFS + '" fill="#666" letter-spacing="1.2"';
+  // The box line sits between the hero and the unit line in weight: heavier
+  // than provenance, lighter than the headline price.
+  const boxAttrs = 'text-anchor="middle" font-family="MadaniArabic, sans-serif" font-weight="600" font-size="' + boxFS + '" fill="#000" letter-spacing="0.4"';
 
   const fields = [];
   if (item)     fields.push({ h: nameFS,   txt: item,     attrs: nameAttrs });
@@ -546,6 +654,7 @@ function freshCardSVG(card, cat, ci, FW, FH, xS, yOffset) {
   if (origin)   fields.push({ h: originFS, txt: origin,   attrs: originAttrs });
   if (heroText) fields.push({ h: heroFS,   txt: heroText, attrs: heroAttrs, markup: pricesToTspans(heroText, heroFS) });
   if (subText)  fields.push({ h: subFS,    txt: subText,  attrs: subAttrs,  markup: pricesToTspans(subText,  subFS)  });
+  if (boxText)  fields.push({ h: boxFS,    txt: boxText,  attrs: boxAttrs,  markup: pricesToTspans(boxText,  boxFS)  });
 
   // ── Distribute evenly between banner bottom and card bottom ───────
   const contentTop = yo + bannerH;
@@ -709,7 +818,9 @@ function PriceCard({
       color: "#000",
       marginTop: 6
     }
-  }, card.size) : null)), card.priceMode === "multibuy" ? (() => {
+  }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
+    card, xR: CW - 18, anchorY: 455, maxW: CW - 18 - sideW - 20, maxFs: 86, preview: true
+  }) : card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
     const maxTextLen = Math.max(...activeTiers.map(t => t.length), 1);
@@ -983,7 +1094,9 @@ function PriceCard8x4({
       color: "#000",
       marginTop: 2
     }
-  }, card.size) : null)), card.priceMode === "multibuy" ? (() => {
+  }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
+    card, xR: CW - 14, anchorY: 124, maxW: CW - 14 - (xStart + sideW + 12), maxFs: 26, preview: true
+  }) : card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
     // Available price area: y=5 to y=logoBotR-4 = ~80px total height
@@ -1181,7 +1294,11 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
   }
 
   // Prices — right-aligned
-  if (card.priceMode === 'multibuy') {
+  if (card.priceMode === 'box') {
+    // Each + box: the two lines land in the same band the hero price owns,
+    // between the size line and the halal strip.
+    s += boxPriceSVG(card, pR, yBot - 42, pR - nX, 24, preview);
+  } else if (card.priceMode === 'multibuy') {
     const tiers = (card.tiers || []).filter(t => t && t.trim());
     const n = tiers.length || 1;
     const maxLen = Math.max.apply(null, tiers.map(t => t.length).concat([1]));
@@ -2130,8 +2247,8 @@ function App() {
     tiers: c.tiers.filter((_, j) => j !== ti)
   } : c));
   const card8 = cards8x4[editIdx8x4];
-  const canSave8 = card8.productName && (card8.priceMode === "multibuy" ? (card8.tiers[0] || "").trim() : card8.priceMode === "wasnow" ? card8.wasPrice && card8.nowPrice : card8.nowPrice);
-  const canSave = form.productName && (form.priceMode === "multibuy" ? (form.tiers[0] || "").trim() : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
+  const canSave8 = card8.productName && (card8.priceMode === "multibuy" ? (card8.tiers[0] || "").trim() : card8.priceMode === "box" ? boxPriceReady(card8) : card8.priceMode === "wasnow" ? card8.wasPrice && card8.nowPrice : card8.nowPrice);
+  const canSave = form.productName && (form.priceMode === "multibuy" ? (form.tiers[0] || "").trim() : form.priceMode === "box" ? boxPriceReady(form) : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
 
   React.useEffect(() => {
     try {
@@ -2166,7 +2283,7 @@ function App() {
   const addTierSm = () => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm && c.tiers.length < 4 ? { ...c, tiers: [...c.tiers, ""] } : c));
   const removeTierSm = ti => setCardsShelfSm(prev => prev.map((c, i) => i === editIdxShelfSm ? { ...c, tiers: c.tiers.filter((_, j) => j !== ti) } : c));
   // A "NEW" talker can be a name-only flag, so it doesn't need a price to export.
-  const canAddShelfSm = cardsShelfSm.some(c => c.productName && (c.badgeType === "new" || (c.priceMode === "multibuy" ? (c.tiers[0] || "").trim() : c.priceMode === "wasnow" ? (c.wasPrice && c.nowPrice) : c.nowPrice)));
+  const canAddShelfSm = cardsShelfSm.some(c => c.productName && (c.badgeType === "new" || (c.priceMode === "multibuy" ? (c.tiers[0] || "").trim() : c.priceMode === "box" ? boxPriceReady(c) : c.priceMode === "wasnow" ? (c.wasPrice && c.nowPrice) : c.nowPrice)));
 
   React.useEffect(() => {
     BUDG_ORDER.forEach(k => {
@@ -2236,6 +2353,7 @@ function App() {
       if (!items.length) { showToast("Add a card first — fill in the form or save to queue"); return; }
 
       const priceSVG = card => {
+        if (card.priceMode === "box") return boxPriceSVG(card, CW - 18, 455, CW - 18 - sideW - 20, 86, false);
         if (card.priceMode === "multibuy") {
           const tiers = (card.tiers || []).filter(t => t && t.trim());
           const n = tiers.length || 1;
@@ -2414,7 +2532,9 @@ function App() {
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceLines8 = '';
-          if (card.priceMode === 'multibuy') {
+          if (card.priceMode === 'box') {
+            priceLines8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
+          } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
             const logoBotR8 = Math.round(800 * sideW / 607.7);
@@ -2510,7 +2630,9 @@ function App() {
         const sizeText = card.size ? '<text x="' + (sideW+18) + '" y="' + sizeY + '" fill="#000" font-family="MadaniArabic" font-size="17">' + pricesToTspans(card.size, 17) + '</text>' : '';
         // price SVG — reuse same logic, all fills already #000
         let priceText = '';
-        if (card.priceMode === 'multibuy') {
+        if (card.priceMode === 'box') {
+          priceText = boxPriceSVG(card, CW - 18, 455, CW - 18 - sideW - 20, 86, false);
+        } else if (card.priceMode === 'multibuy') {
           const tiers = (card.tiers || []).filter(t => t && t.trim());
           const n = tiers.length || 1;
           const maxTierLen = Math.max(...tiers.map(t => t.length), 1);
@@ -2591,7 +2713,9 @@ function App() {
           const _8nBlockH = _8nFS + (_8nLines.length - 1) * _8nLH;
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceText8 = '';
-          if (card.priceMode === 'multibuy') {
+          if (card.priceMode === 'box') {
+            priceText8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
+          } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
             const logoBotR8 = Math.round(800 * sideW / 607.7);
@@ -3196,25 +3320,21 @@ function App() {
   }, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Price Mode"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex"
-    }
-  }, [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"]].map(([val, label], i, arr) => /*#__PURE__*/React.createElement("button", {
+    style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 4 }
+  }, PRICE_MODES.map(([val, label]) => /*#__PURE__*/React.createElement("button", {
     key: val,
     onClick: () => set("priceMode", val),
     style: {
-      flex: 1,
-      padding: "8px 0",
+      padding: "8px 2px",
       cursor: "pointer",
       background: form.priceMode === val ? K : "#f0f0f0",
       color: form.priceMode === val ? W : "#555",
-      border: "2px solid #e0e0e0",
-      borderRight: i < arr.length - 1 ? "none" : "2px solid #e0e0e0",
+      border: "2px solid " + (form.priceMode === val ? K : "#e0e0e0"),
       fontWeight: 700,
       fontSize: 10,
       letterSpacing: 0.5,
       fontFamily: "system-ui, sans-serif",
-      borderRadius: i === 0 ? "3px 0 0 3px" : i === arr.length - 1 ? "0 3px 3px 0" : "0"
+      borderRadius: 3
     }
   }, label)))), form.priceMode === "single" && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3290,7 +3410,10 @@ function App() {
     placeholder: "e.g. 2 for \xA33.00",
     value: form.tiers[0] || "",
     onChange: e => setTier(0, e.target.value)
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), form.priceMode === "box" && /*#__PURE__*/React.createElement(BoxPriceFields, {
+    card: form,
+    set: set
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 18
     }
@@ -3496,25 +3619,21 @@ function App() {
   }, /*#__PURE__*/React.createElement("label", {
     style: lbl
   }, "Price Mode"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex"
-    }
-  }, [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"]].map(([val, label], i, arr) => /*#__PURE__*/React.createElement("button", {
+    style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 4 }
+  }, PRICE_MODES.map(([val, label]) => /*#__PURE__*/React.createElement("button", {
     key: val,
     onClick: () => set8("priceMode", val),
     style: {
-      flex: 1,
-      padding: "8px 0",
+      padding: "8px 2px",
       cursor: "pointer",
       background: card8.priceMode === val ? K : "#f0f0f0",
       color: card8.priceMode === val ? W : "#555",
-      border: "2px solid #e0e0e0",
-      borderRight: i < arr.length - 1 ? "none" : "2px solid #e0e0e0",
+      border: "2px solid " + (card8.priceMode === val ? K : "#e0e0e0"),
       fontWeight: 700,
       fontSize: 10,
       letterSpacing: 0.5,
       fontFamily: "system-ui, sans-serif",
-      borderRadius: i === 0 ? "3px 0 0 3px" : i === arr.length - 1 ? "0 3px 3px 0" : "0"
+      borderRadius: 3
     }
   }, label)))), card8.priceMode === "single" && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3604,7 +3723,10 @@ function App() {
     placeholder: "e.g. 2 for \xA33.00",
     value: card8.tiers[0] || "",
     onChange: e => setTier8(0, e.target.value)
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), card8.priceMode === "box" && /*#__PURE__*/React.createElement(BoxPriceFields, {
+    card: card8,
+    set: set8
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 18
     }
@@ -3794,16 +3916,16 @@ function App() {
           }, label)))),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Price Mode"),
-        /*#__PURE__*/React.createElement("div", { style: { display: "flex" } },
-          [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"]].map(([val, label], i, arr) => /*#__PURE__*/React.createElement("button", {
+        /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 4 } },
+          PRICE_MODES.map(([val, label]) => /*#__PURE__*/React.createElement("button", {
             key: val,
             onClick: () => setSm("priceMode", val),
             style: {
-              flex: 1, padding: "8px 0", cursor: "pointer",
+              padding: "8px 2px", cursor: "pointer",
               background: cardSm.priceMode === val ? K : "#f0f0f0", color: cardSm.priceMode === val ? W : "#555",
-              border: "2px solid #e0e0e0", borderRight: i < arr.length - 1 ? "none" : "2px solid #e0e0e0",
+              border: "2px solid " + (cardSm.priceMode === val ? K : "#e0e0e0"),
               fontWeight: 700, fontSize: 10, letterSpacing: 0.5, fontFamily: "system-ui, sans-serif",
-              borderRadius: i === 0 ? "3px 0 0 3px" : i === arr.length - 1 ? "0 3px 3px 0" : "0"
+              borderRadius: 3
             }
           }, label)))),
       cardSm.priceMode === "single" && /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
@@ -3816,6 +3938,7 @@ function App() {
       cardSm.priceMode === "multibuy" && /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 18 } },
         /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Single Price"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. \xA31.99", value: cardSm.nowPrice, onChange: e => setSm("nowPrice", e.target.value), onBlur: e => setSm("nowPrice", formatPrice(e.target.value)) })),
         /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: lbl }, "Multi-Buy Price *"), /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 for \xA33.00", value: cardSm.tiers[0] || "", onChange: e => setTierSm(0, e.target.value) }))),
+      cardSm.priceMode === "box" && /*#__PURE__*/React.createElement(BoxPriceFields, { card: cardSm, set: setSm }),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Valid Until ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
         /*#__PURE__*/React.createElement("input", { style: inp, type: "text", placeholder: "e.g. 30 Apr or 30/04/26", value: cardSm.validUntil || "", onChange: e => setSm("validUntil", e.target.value) })),
@@ -3906,6 +4029,15 @@ function App() {
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Multibuy Deal ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional — becomes the hero)")),
         /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 2 FOR £1.75", value: cardF.multibuyPrice, onChange: e => setF("multibuyPrice", e.target.value) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 12 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Box Price ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. £18.99", value: cardF.boxPrice || "", onChange: e => setF("boxPrice", e.target.value), onBlur: e => setF("boxPrice", formatPrice(e.target.value)) })
+      ),
+      /*#__PURE__*/React.createElement("div", { style: { marginBottom: 14 } },
+        /*#__PURE__*/React.createElement("label", { style: lbl }, "Quantity in Box ", /*#__PURE__*/React.createElement("span", { style: { fontWeight: 400, fontSize: 10 } }, "(optional)")),
+        /*#__PURE__*/React.createElement("input", { style: inp, placeholder: "e.g. 60", value: cardF.boxQty || "", onChange: e => setF("boxQty", e.target.value) }),
+        cardF.boxPrice && /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#888", marginTop: 3, fontFamily: "system-ui,sans-serif" } }, "card reads \u201c" + boxCaptionText(cardF) + "\u201d")
       ),
       /*#__PURE__*/React.createElement("div", { style: { marginBottom: 18 } },
         /*#__PURE__*/React.createElement("label", { style: lbl }, "Special Offer?"),
