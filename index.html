@@ -400,17 +400,17 @@ function boxPriceLayout(card, maxW, maxFs, preview) {
     { cap: boxCaptionText(card), txt: String((card && card.boxPrice) || '').trim() }
   ].filter(r => r.txt || preview).map(r => ({ cap: r.cap, txt: r.txt || '0.00', ghost: !r.txt }));
   if (!rows.length) return null;
-  const capMax = Math.max(6, Math.round(maxFs * 0.3));
+  const capMax = Math.max(6, Math.round(maxFs * 0.26));
   const capFs = Math.min.apply(null, rows.map(r => mmFitFs(r.cap, maxW * 0.46, '600', 6, capMax)).concat([capMax]));
   const capW = Math.max.apply(null, rows.map(r => mmWidth(r.cap, capFs, '600', 'MadaniArabic')));
-  const gap = Math.max(6, capFs);
+  const gap = Math.max(5, Math.round(capFs * 0.6));
   const priceW = Math.max(12, maxW - capW - gap);
   const fs = Math.min.apply(null, rows.map(r => mmFitFs(r.txt, priceW, '700', 8, maxFs)).concat([maxFs]));
   // The pair is set flush right as one block, not spread across the whole
   // column: on the shelf talkers the left of that column belongs to the
   // product name and the size line, and a caption parked there collides.
   const blockW = Math.min(maxW, capW + gap + Math.max.apply(null, rows.map(r => mmWidth(r.txt, fs, '700', 'MadaniArabic'))));
-  return { rows, capFs, fs, blockW, adv: Math.round(fs * 1.16) };
+  return { rows, capFs, fs, blockW, adv: Math.round(fs * 1.1) };
 }
 
 // xR is the right edge of the price column, anchorY the baseline of the last
@@ -1097,7 +1097,7 @@ function PriceCard8x4({
       marginTop: 2
     }
   }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
-    card, xR: CW - 14, anchorY: 124, maxW: CW - 14 - (xStart + sideW + 12), maxFs: 26, preview: true
+    card, xR: CW - 14, anchorY: 124, maxW: CW - 14 - (xStart + sideW + 12), maxFs: 28, preview: true
   }) : card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
@@ -1299,7 +1299,7 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
   if (card.priceMode === 'box') {
     // Each + box: the two lines land in the same band the hero price owns,
     // between the size line and the halal strip.
-    s += boxPriceSVG(card, pR, yBot - 42, pR - nX, 24, preview);
+    s += boxPriceSVG(card, pR, yBot - 37, pR - nX, 26, preview);
   } else if (card.priceMode === 'multibuy') {
     const tiers = (card.tiers || []).filter(t => t && t.trim());
     const n = tiers.length || 1;
@@ -2535,7 +2535,7 @@ function App() {
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceLines8 = '';
           if (card.priceMode === 'box') {
-            priceLines8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
+            priceLines8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 28, false);
           } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
@@ -2716,7 +2716,7 @@ function App() {
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceText8 = '';
           if (card.priceMode === 'box') {
-            priceText8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
+            priceText8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 28, false);
           } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
