@@ -426,56 +426,6 @@ function boxPriceSVG(card, xR, anchorY, maxW, maxFs, preview) {
   }).join('');
 }
 
-/* The shelf talkers set the same pair side by side instead. Their price area
-   is far wider than it is tall, so two columns are read in one glance where
-   two stacked lines make the eye travel — and on a shelf edge, at arm's
-   length, that glance is all the card gets. Prices share a baseline, each
-   caption rides above its own price, and both columns are centred so the
-   pair reads as one offer with two ways to buy. */
-function boxPairLayout(card, maxW, maxFs, preview) {
-  const rows = [
-    { cap: 'EACH', txt: String((card && card.nowPrice) || '').trim(), col: 0 },
-    { cap: boxCaptionText(card), txt: String((card && card.boxPrice) || '').trim(), col: 1 }
-  ].filter(r => r.txt || preview).map(r => ({ cap: r.cap, col: r.col, txt: r.txt || '0.00', ghost: !r.txt }));
-  if (!rows.length) return null;
-  const colW = maxW / 2;
-  const fs = Math.min.apply(null, rows.map(r => mmFitFs(r.txt, colW * 0.9, '700', 8, maxFs)).concat([maxFs]));
-  const capMax = Math.max(5, Math.round(fs * 0.4));
-  const capFs = Math.min.apply(null, rows.map(r => mmFitFs(r.cap, colW * 0.96, '600', 5, capMax)).concat([capMax]));
-  // Caption baseline sits a half-caption above the price's cap height.
-  return { rows, fs, capFs, colW, capDy: Math.round(fs * 0.78) + Math.round(capFs * 0.55) };
-}
-
-function boxPricePairSVG(card, xR, anchorY, maxW, maxFs, preview) {
-  const L = boxPairLayout(card, maxW, maxFs, preview);
-  if (!L) return '';
-  const x0 = xR - maxW;
-  return L.rows.map(r => {
-    const cx = (x0 + r.col * L.colW + L.colW / 2).toFixed(2);
-    return '<text x="' + cx + '" y="' + (anchorY - L.capDy) + '" text-anchor="middle" fill="#000" font-family="MadaniArabic" font-weight="600" font-size="' + L.capFs + '" letter-spacing="0.4">' + escSVG(r.cap) + '</text>' +
-      '<text x="' + cx + '" y="' + anchorY + '" text-anchor="middle" fill="' + (r.ghost ? '#ddd' : '#000') + '" font-family="MadaniArabic" font-weight="700" font-size="' + L.fs + '" letter-spacing="-0.4">' + pricesToTspans(r.txt, L.fs) + '</text>';
-  }).join('');
-}
-
-// The 8×4 preview is built with createElement, so it needs the pair as nodes.
-function BoxPricePair({ card, xR, anchorY, maxW, maxFs, preview }) {
-  const L = boxPairLayout(card, maxW, maxFs, preview);
-  if (!L) return null;
-  const x0 = xR - maxW;
-  return /*#__PURE__*/React.createElement(React.Fragment, null, L.rows.map(r => {
-    const cx = x0 + r.col * L.colW + L.colW / 2;
-    return /*#__PURE__*/React.createElement(React.Fragment, { key: r.col },
-      /*#__PURE__*/React.createElement("text", {
-        x: cx, y: anchorY - L.capDy, textAnchor: "middle", fill: "#000",
-        fontFamily: "'MadaniArabic', sans-serif", fontWeight: "600", fontSize: L.capFs, letterSpacing: "0.4"
-      }, r.cap),
-      /*#__PURE__*/React.createElement("text", {
-        x: cx, y: anchorY, textAnchor: "middle", fill: r.ghost ? "#ddd" : "#000",
-        fontFamily: "'MadaniArabic', sans-serif", fontWeight: "700", fontSize: L.fs, letterSpacing: "-0.4"
-      }, ...pricesToReactChildren(r.txt, L.fs)));
-  }));
-}
-
 // The four price modes, in one place: three editors render the same picker.
 const PRICE_MODES = [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"], ["box", "Each + Box"]];
 
@@ -1146,8 +1096,8 @@ function PriceCard8x4({
       color: "#000",
       marginTop: 2
     }
-  }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPricePair, {
-    card, xR: CW - 14, anchorY: 126, maxW: CW - 14 - (xStart + sideW + 12), maxFs: 30, preview: true
+  }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
+    card, xR: CW - 14, anchorY: 124, maxW: CW - 14 - (xStart + sideW + 12), maxFs: 26, preview: true
   }) : card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
     const n = activeTiers.length || 1;
@@ -1347,9 +1297,9 @@ function shelfSmCellSVG(card, xo, yo, textOnly, logoPath, preview) {
 
   // Prices — right-aligned
   if (card.priceMode === 'box') {
-    // Each + box, side by side in the band the hero price owns, between the
-    // size line and the halal strip.
-    s += boxPricePairSVG(card, pR, yBot - 39, pR - nX, 26, preview);
+    // Each + box: the two lines land in the same band the hero price owns,
+    // between the size line and the halal strip.
+    s += boxPriceSVG(card, pR, yBot - 42, pR - nX, 24, preview);
   } else if (card.priceMode === 'multibuy') {
     const tiers = (card.tiers || []).filter(t => t && t.trim());
     const n = tiers.length || 1;
@@ -2585,7 +2535,7 @@ function App() {
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceLines8 = '';
           if (card.priceMode === 'box') {
-            priceLines8 = boxPricePairSVG(card, CW - 14, yo + 126, CW - 14 - _8nX, 30, false);
+            priceLines8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
           } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
@@ -2766,7 +2716,7 @@ function App() {
           const sizeY8 = Math.min(yo + 71, yo + 5 + _8nBlockH + 2 + 10);
           let priceText8 = '';
           if (card.priceMode === 'box') {
-            priceText8 = boxPricePairSVG(card, CW - 14, yo + 126, CW - 14 - _8nX, 30, false);
+            priceText8 = boxPriceSVG(card, CW - 14, yo + 124, CW - 14 - _8nX, 26, false);
           } else if (card.priceMode === 'multibuy') {
             const activeTiers = (card.tiers || []).filter(t => t && t.trim());
             const n = activeTiers.length || 1;
