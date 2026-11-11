@@ -1321,10 +1321,11 @@ const BUDG = {
 const BUDG_ORDER = ['wide', 'narrow', 'stack'];
 const budgKindOf = t => t === 'budgwide' ? 'wide' : t === 'budgnarrow' ? 'narrow' : t === 'budgstack' ? 'stack' : null;
 const isBudgT = t => !!budgKindOf(t);
-const budgEmptyCard = () => ({ productName: '', size: '', wasPrice: '', nowPrice: '', unitPrice: '', priceMode: 'single', tiers: ['', ''], validUntil: '', halal: false });
-const budgCardFilled = c => !!(c && (c.productName || c.nowPrice || c.wasPrice || (c.tiers || []).some(t => t && t.trim())));
+const budgEmptyCard = () => ({ productName: '', size: '', wasPrice: '', nowPrice: '', unitPrice: '', priceMode: 'single', tiers: ['', ''], boxPrice: '', boxQty: '', validUntil: '', halal: false });
+const budgCardFilled = c => !!(c && (c.productName || c.nowPrice || c.wasPrice || c.boxPrice || (c.tiers || []).some(t => t && t.trim())));
 const budgCardReady = c => !!(c && c.productName && (c.priceMode === 'multibuy'
   ? ((c.tiers || [])[0] || '').trim()
+  : c.priceMode === 'box' ? (c.nowPrice && c.boxPrice)
   : c.priceMode === 'wasnow' ? (c.wasPrice && c.nowPrice) : c.nowPrice));
 
 // Card size plus the top-left corner of every slot, centred on the A4 sheet.
@@ -1351,7 +1352,23 @@ function budgHero(card) {
 function budgSub(card) {
   if (card.priceMode === 'multibuy') return (card.nowPrice || '').trim();
   if (card.priceMode === 'wasnow') return (card.wasPrice || '').trim();
+  // Box mode gets a two-column layout on the A4 Stack; on Wide and Narrow,
+  // which have no room for it, the box deal drops to the sub line.
+  if (card.priceMode === 'box') return budgBoxLine(card);
   return '';
+}
+// "Box of 20 \u00b7 \u00a325.00" \u2014 whichever halves of it were filled in.
+function budgBoxLine(card) {
+  const qty = (card.boxQty || '').trim();
+  const price = (card.boxPrice || '').trim();
+  const cap = budgBoxCaption(card);
+  if (!price) return qty ? cap : '';
+  return cap + ' \u00b7 ' + price;
+}
+// Caption over the box price. Plain "Per Box" until a quantity is typed.
+function budgBoxCaption(card) {
+  const qty = (card.boxQty || '').trim();
+  return qty ? 'Box of ' + qty : 'Per Box';
 }
 function budgUnit(card) {
   if (card.priceMode === 'multibuy') {
@@ -1482,19 +1499,51 @@ function budgStackSVG(card, xo, yo, cfg, textOnly, preview) {
   }
 
   /* ── pink half ── */
-  const heroTxt = budgHero(card);
-  const sub = budgSub(card);
-  const hero = heroTxt || (preview ? '0.00' : '');
-  if (hero) {
-    const fs = budgFitFs(hero, cardW * 0.66, pinkH * 0.62, '400', 'Anton', 0);
-    const centre = y0 + pinkH * (sub ? 0.46 : 0.54);
-    const fill = heroTxt ? ink : (textOnly ? '#ddd' : 'rgba(255,255,255,0.45)');
-    s += budgText(cx, centre + fs * 0.365, 'Anton', '400', fs, fill, hero, '', 1);
-  }
-  if (sub) {
-    const fs = budgFitFs(sub, cardW * 0.6, pinkH * 0.1, '400', 'MadaniArabic', 0);
-    const strike = card.priceMode === 'wasnow' ? ' text-decoration="line-through"' : '';
-    s += budgText(cx, y0 + pinkH * 0.83, 'MadaniArabic', '400', fs, ink, sub, strike, 1);
+  if (card.priceMode === 'box') {
+    // Sold loose and by the box: two columns of equal weight, single price on
+    // the left, box price on the right, a hairline down the middle. Each
+    // price carries its own caption, so the box quantity is read with it.
+    const colW = cardW / 2;
+    const lcx = x0 + colW / 2, rcx = x0 + cardW - colW / 2;
+    const singleTxt = (card.nowPrice || '').trim();
+    const boxTxt = (card.boxPrice || '').trim();
+    const single = singleTxt || (preview ? '0.00' : '');
+    const box = boxTxt || (preview ? '0.00' : '');
+    const ghost = textOnly ? '#ddd' : 'rgba(255,255,255,0.45)';
+    const capTrack = 0.06;
+    const caps = ['EACH', budgBoxCaption(card).toUpperCase()];
+    // One size for both prices, and one for both captions, so the two columns
+    // read as a matched pair rather than two unrelated offers.
+    const priceFs = Math.min.apply(null, [single, box].filter(Boolean)
+      .map(t => budgFitFs(t, colW * 0.84, pinkH * 0.34, '400', 'Anton', 0)).concat([pinkH * 0.34]));
+    const capFs = Math.min.apply(null, caps
+      .map(t => budgFitFs(t, colW * 0.84, pinkH * 0.08, '700', 'MadaniArabic', capTrack)).concat([pinkH * 0.08]));
+    const capExtra = ' letter-spacing="' + (capFs * capTrack).toFixed(2) + '"';
+    const capY = y0 + pinkH * 0.32;
+    const priceY = y0 + pinkH * 0.58 + priceFs * 0.365;
+    s += '<line x1="' + cx.toFixed(2) + '" y1="' + (y0 + pinkH * 0.2).toFixed(2) +
+      '" x2="' + cx.toFixed(2) + '" y2="' + (y0 + pinkH * 0.78).toFixed(2) +
+      '" stroke="' + (textOnly ? '#000' : 'rgba(255,255,255,0.5)') +
+      '" stroke-width="' + (textOnly ? '0.8' : '1.4') + '"/>';
+    s += budgText(lcx, capY, 'MadaniArabic', '700', capFs, ink, caps[0], capExtra, 1);
+    s += budgText(rcx, capY, 'MadaniArabic', '700', capFs, ink, caps[1], capExtra, 1);
+    if (single) s += budgText(lcx, priceY, 'Anton', '400', priceFs, singleTxt ? ink : ghost, single, '', 1);
+    if (box) s += budgText(rcx, priceY, 'Anton', '400', priceFs, boxTxt ? ink : ghost, box, '', 1);
+  } else {
+    const heroTxt = budgHero(card);
+    const sub = budgSub(card);
+    const hero = heroTxt || (preview ? '0.00' : '');
+    if (hero) {
+      const fs = budgFitFs(hero, cardW * 0.66, pinkH * 0.62, '400', 'Anton', 0);
+      const centre = y0 + pinkH * (sub ? 0.46 : 0.54);
+      const fill = heroTxt ? ink : (textOnly ? '#ddd' : 'rgba(255,255,255,0.45)');
+      s += budgText(cx, centre + fs * 0.365, 'Anton', '400', fs, fill, hero, '', 1);
+    }
+    if (sub) {
+      const fs = budgFitFs(sub, cardW * 0.6, pinkH * 0.1, '400', 'MadaniArabic', 0);
+      const strike = card.priceMode === 'wasnow' ? ' text-decoration="line-through"' : '';
+      s += budgText(cx, y0 + pinkH * 0.83, 'MadaniArabic', '400', fs, ink, sub, strike, 1);
+    }
   }
   if (card.validUntil) {
     const vTxt = 'Valid until ' + card.validUntil;
@@ -1632,6 +1681,10 @@ function BudgEditor(props) {
     hint && React.createElement('div', { style: { fontSize: 10, color: '#888', marginTop: 3, fontFamily: 'system-ui,sans-serif' } }, hint));
   const unitField = () => field('Unit Price', 'unitPrice', 'e.g. 60p per 100ml', false,
     card.size && card.nowPrice ? 'auto-calculated · edit to override' : null);
+  // Each + Box is an A4 Stack mode only: the Wide and Narrow cards have one
+  // price area, with no room to carry two prices and a box quantity.
+  const modes = [['single', 'Single Price'], ['wasnow', 'Was / Now'], ['multibuy', 'Multi-Buy']];
+  if (kind === 'stack') modes.push(['box', 'Each + Box']);
   return React.createElement('div', { className: 'main-row' },
     React.createElement('div', { className: 'form-pane' },
       React.createElement('div', { style: { height: 3, background: BUDG_PINK, marginBottom: 14, borderRadius: 2 } }),
@@ -1670,16 +1723,16 @@ function BudgEditor(props) {
       field('Size / Weight', 'size', 'e.g. 75cl'),
       React.createElement('div', { style: { marginBottom: 14 } },
         React.createElement('label', { style: lbl }, 'Price Mode'),
-        React.createElement('div', { style: { display: 'flex' } },
-          [['single', 'Single Price'], ['wasnow', 'Was / Now'], ['multibuy', 'Multi-Buy']].map((pair, i, arr) => React.createElement('button', {
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(' + (modes.length > 3 ? 2 : 3) + ', 1fr)', gap: 4 } },
+          modes.map(pair => React.createElement('button', {
             key: pair[0],
             onClick: () => setField('priceMode', pair[0]),
             style: {
-              flex: 1, padding: '8px 0', cursor: 'pointer',
+              padding: '8px 2px', cursor: 'pointer',
               background: card.priceMode === pair[0] ? K : '#f0f0f0', color: card.priceMode === pair[0] ? W : '#555',
-              border: '2px solid #e0e0e0', borderRight: i < arr.length - 1 ? 'none' : '2px solid #e0e0e0',
+              border: '2px solid ' + (card.priceMode === pair[0] ? K : '#e0e0e0'),
               fontWeight: 700, fontSize: 10, letterSpacing: 0.5, fontFamily: 'system-ui, sans-serif',
-              borderRadius: i === 0 ? '3px 0 0 3px' : i === arr.length - 1 ? '0 3px 3px 0' : '0'
+              borderRadius: 3
             }
           }, pair[1])))),
       card.priceMode === 'single' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 18 } },
@@ -1694,6 +1747,11 @@ function BudgEditor(props) {
         React.createElement('div', { style: { marginBottom: 13 } },
           React.createElement('label', { style: lbl }, 'Multi-Buy Price *'),
           React.createElement('input', { style: inp, placeholder: 'e.g. 2 for £3.00', value: (card.tiers || [])[0] || '', onChange: e => setTier(0, e.target.value) }))),
+      card.priceMode === 'box' && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 18 } },
+        field('Single Price *', 'nowPrice', 'e.g. £1.49', true),
+        field('Box Price *', 'boxPrice', 'e.g. £25.00', true),
+        field('Quantity in Box', 'boxQty', 'e.g. 20', false, 'shown as “' + budgBoxCaption(card).toUpperCase() + '” over the box price'),
+        unitField()),
       React.createElement('div', { style: { marginBottom: 18 } },
         React.createElement('label', { style: lbl }, 'Valid Until ', React.createElement('span', { style: { fontWeight: 400, fontSize: 10 } }, '(optional)')),
         React.createElement('input', { style: inp, type: 'text', placeholder: 'e.g. 30 Apr or 30/04/26', value: card.validUntil || '', onChange: e => setField('validUntil', e.target.value) })),
