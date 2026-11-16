@@ -231,7 +231,10 @@ function ucCard(card) {
     multibuyPrice: _ucP(card.multibuyPrice),
     boxPrice:      _ucP(card.boxPrice),
     boxQty:        _uc(card.boxQty),
-    tiers: Array.isArray(card.tiers) ? card.tiers.map(_ucP) : card.tiers
+    tiers: Array.isArray(card.tiers) ? card.tiers.map(_ucP) : card.tiers,
+    msRows: Array.isArray(card.msRows) ? card.msRows.map(r => r ? {
+      size: _uc(r.size), price: _ucP(r.price), unit: _ucP(r.unit)
+    } : r) : card.msRows
   });
 }
 
@@ -441,8 +444,213 @@ function boxPriceSVG(card, xR, anchorY, maxW, maxFs, preview) {
   }).join('');
 }
 
+/* ─── "Multi-Size" price block (Promo A4 only) ───────────────────────
+   One product, up to three sizes, one card: everything in the white area
+   below the product name is handed to the sizes, each with its own price and,
+   where it earns its place, its own unit price.
+
+       CYPRESSA EXTRA VIRGIN
+       OLIVE OIL
+
+       500ML                        £5.49
+                               £1.10 PER 100ML
+       1L                           £9.99
+                               £1.00 PER 100ML
+       5L                          £24.99
+                                50p PER 100ML
+
+   The measurements are all given on a 794×1123 card (A4 at 96dpi) and drawn
+   inside a group scaled by (card width / 794), so the live preview and the
+   exported page are one drawing at two sizes and cannot drift apart. The left
+   band, the yellow "m.", the red footer, the halal mark and the valid-until
+   line are untouched — the card around this block is the card it always was. */
+const MS_SPEC_W   = 794;   // the card the measurements below describe
+const MS_WHITE_W  = 620;   // white area — everything right of the black band
+const MS_NAME_H   = 250;   // product-name zone, measured from the top
+const MS_ROWS_H   = 681;   // what is left below it for the size rows
+const MS_PAD      = { t: 26, l: 36, r: 40 };  // inside one size row
+const MS_NAME_PAD = { t: 44, l: 36, r: 40 };
+const MS_NAME_FS = 48, MS_NAME_LH = 1.1, MS_NAME_LINES = 3, MS_NAME_LS = -1, MS_NAME_MIN_FS = 32;
+const MS_LABEL_FS = 44, MS_LABEL_DROP = 6, MS_LABEL_MIN_FS = 14, MS_LABEL_GAP = 24;
+const MS_PRICE_FS = 150, MS_PRICE_LH = 0.9, MS_PRICE_LS = -2;
+const MS_PENCE_FS = 84, MS_PENCE_NUDGE = 4;
+const MS_UNIT_FS = 24, MS_UNIT_GAP = 10, MS_UNIT_LS = 0.3;
+// Weight, tracking and alignment per line kind — the price has its own run
+// splitting below, so it is not in the table.
+const MS_TYPE = {
+  name:  { w: 500, ls: MS_NAME_LS, anchor: 'start' },
+  label: { w: 700, ls: 0,          anchor: 'start' },
+  unit:  { w: 400, ls: MS_UNIT_LS, anchor: 'end'   }
+};
+
+// Three rows, always. A draft saved before this mode existed has no msRows at
+// all, so every reader goes through here rather than trusting the field.
+function msRowsOf(card) {
+  const src = card && Array.isArray(card.msRows) ? card.msRows : [];
+  return [0, 1, 2].map(i => {
+    const r = src[i] || {};
+    return { size: String(r.size || ''), price: String(r.price || ''), unit: String(r.unit || '') };
+  });
+}
+const msFilledRows = rows => rows.filter(r => r.size.trim() || r.price.trim());
+// Rows one and two carry the offer; the third is a bonus, so two sized prices
+// is the least that is worth printing.
+const multiSizeReady = card => {
+  const r = msRowsOf(card);
+  return !!(r[0].size.trim() && r[0].price.trim() && r[1].size.trim() && r[1].price.trim());
+};
+
+// The same pounds/pence split Single Price uses, returned as runs: "£24." sits
+// on the baseline at the price size and "99" rides above it as a superscript,
+// top-aligned with the pounds and then nudged back down.
+function msPriceRuns(txt) {
+  const str = String(txt);
+  const m = str.match(/£(\d+)\.(\d{2})/);
+  if (!m) return [{ text: str, fs: MS_PRICE_FS, dy: 0 }];
+  const shift = Math.round(0.78 * (MS_PRICE_FS - MS_PENCE_FS)) - MS_PENCE_NUDGE;
+  const head = str.slice(0, m.index) + '£' + m[1] + '.';
+  const tail = str.slice(m.index + m[0].length);
+  const runs = [{ text: head, fs: MS_PRICE_FS, dy: 0 },
+                { text: m[2], fs: MS_PENCE_FS, dy: -shift }];
+  // The reverse dy puts the cursor back on the baseline for anything after it.
+  if (tail) runs.push({ text: tail, fs: MS_PRICE_FS, dy: shift });
+  return runs;
+}
+// Measured run by run, the way it is drawn: the pence are set smaller, so a
+// price measured whole comes out wider than it prints.
+const msRunsW = runs =>
+  runs.reduce((w, r) => w + mmWidth(r.text, r.fs, '700', 'MadaniArabic'), 0) +
+  MS_PRICE_LS * Math.max(0, runs.reduce((n, r) => n + r.text.length, 0) - 1);
+
+// One list of lines in 794-space, x measured from the white area's left edge.
+// `preview` adds the grey placeholders the live card shows while it is empty.
+function multiSizeLayout(card, preview) {
+  let rows = msFilledRows(msRowsOf(card));
+  const ghostRow = rows.length === 0;
+  if (ghostRow) { if (!preview) return []; rows = [{ size: '', price: '', unit: '' }]; }
+  // Two rows share the space equally, three share it equally; a half-typed
+  // card previews as the two-row card it is on its way to being.
+  const n = Math.min(3, Math.max(2, rows.length));
+  const rowH = MS_ROWS_H / n;
+  const xL = MS_PAD.l;
+  const xR = MS_WHITE_W - MS_PAD.r;
+  const items = [];
+
+  // Product name — wrapped in the real face, so the preview and the export
+  // break at the same words.
+  const name = String((card && card.productName) || '').trim();
+  const nameW = MS_WHITE_W - MS_NAME_PAD.l - MS_NAME_PAD.r;
+  // 48px, three lines: that holds every name the shelves actually carry. A
+  // longer one steps down in whole points until it does fit, rather than
+  // losing its last word or running into the first price.
+  let nameFs = MS_NAME_FS;
+  let nameLines = name ? mmWrap(name, nameW, nameFs, '500') : (preview ? ['PRODUCT NAME'] : []);
+  while (name && nameLines.length > MS_NAME_LINES && nameFs > MS_NAME_MIN_FS) {
+    nameFs -= 2;
+    nameLines = mmWrap(name, nameW, nameFs, '500');
+  }
+  nameLines = nameLines.slice(0, MS_NAME_LINES);
+  const nameAdv = Math.round(nameFs * MS_NAME_LH);
+  nameLines.forEach((line, i) => items.push({
+    t: 'name', x: MS_NAME_PAD.l, y: MS_NAME_PAD.t + nameFs + i * nameAdv,
+    fs: nameFs, text: line, ghost: !name
+  }));
+
+  rows.forEach((r, i) => {
+    const top = MS_NAME_H + i * rowH + MS_PAD.t;
+    const priceY = top + MS_PRICE_FS * MS_PRICE_LH;
+    const priceTxt = r.price.trim() || (preview ? '£0.00' : '');
+    const runs = priceTxt ? msPriceRuns(priceTxt) : null;
+    const label = r.size.trim();
+    if (label) {
+      // When the two would collide the size label gives way, never the price.
+      const room = xR - xL - (runs ? msRunsW(runs) : 0) - MS_LABEL_GAP;
+      const fs = mmFitFs(label, room, '700', MS_LABEL_MIN_FS, MS_LABEL_FS);
+      items.push({ t: 'label', x: xL, y: top + MS_LABEL_DROP + fs, fs, text: label });
+    }
+    if (runs) items.push({ t: 'price', x: xR, y: priceY, runs, ghost: !r.price.trim() });
+    if (r.unit.trim()) items.push({
+      t: 'unit', x: xR, y: priceY + MS_UNIT_GAP + MS_UNIT_FS, fs: MS_UNIT_FS, text: r.unit.trim()
+    });
+  });
+  return items;
+}
+
+// Export paths: one scaled group, so every number above is printed as given.
+function multiSizeSVG(card, CW, sideW, preview) {
+  const items = multiSizeLayout(card, preview);
+  if (!items.length) return '';
+  const body = items.map(it => {
+    if (it.t === 'price') {
+      const runs = it.runs.map(r =>
+        '<tspan' + (r.dy ? ' dy="' + r.dy + '"' : '') + ' font-size="' + r.fs + '">' + escSVG(r.text) + '</tspan>'
+      ).join('');
+      return '<text x="' + it.x + '" y="' + it.y.toFixed(2) + '" text-anchor="end" fill="' + (it.ghost ? '#ddd' : '#000') +
+        '" font-family="MadaniArabic" font-weight="700" font-size="' + MS_PRICE_FS +
+        '" letter-spacing="' + MS_PRICE_LS + '">' + runs + '</text>';
+    }
+    const st = MS_TYPE[it.t];
+    return '<text x="' + it.x + '" y="' + it.y.toFixed(2) + '" text-anchor="' + st.anchor +
+      '" fill="' + (it.ghost ? '#ccc' : '#000') + '" font-family="MadaniArabic" font-weight="' + st.w +
+      '" font-size="' + it.fs + '" letter-spacing="' + st.ls + '">' + pricesToTspans(it.text, it.fs) + '</text>';
+  }).join('');
+  return '<g transform="translate(' + sideW + ',0) scale(' + (CW / MS_SPEC_W).toFixed(6) + ')">' + body + '</g>';
+}
+
+// Same block for the live preview, built with createElement.
+function MultiSizeBlock({ card, CW, sideW, preview }) {
+  const items = multiSizeLayout(card, preview);
+  if (!items.length) return null;
+  const FONT = "'MadaniArabic', sans-serif";
+  return /*#__PURE__*/React.createElement("g", {
+    transform: 'translate(' + sideW + ',0) scale(' + (CW / MS_SPEC_W).toFixed(6) + ')'
+  }, items.map((it, k) => {
+    if (it.t === 'price') {
+      return /*#__PURE__*/React.createElement("text", {
+        key: k, x: it.x, y: it.y, textAnchor: "end", fill: it.ghost ? "#ddd" : "#000",
+        fontFamily: FONT, fontWeight: "700", fontSize: MS_PRICE_FS, letterSpacing: String(MS_PRICE_LS)
+      }, it.runs.map((r, j) => /*#__PURE__*/React.createElement("tspan", {
+        key: j, dy: r.dy || undefined, fontSize: r.fs
+      }, r.text)));
+    }
+    const st = MS_TYPE[it.t];
+    return /*#__PURE__*/React.createElement("text", {
+      key: k, x: it.x, y: it.y, textAnchor: st.anchor, fill: it.ghost ? "#ccc" : "#000",
+      fontFamily: FONT, fontWeight: String(st.w), fontSize: it.fs, letterSpacing: String(st.ls)
+    }, ...pricesToReactChildren(it.text, it.fs));
+  }));
+}
+
+// The three size rows as form fields. Rows one and two are required, row three
+// is there when a third size is on the shelf.
+function MultiSizeFields({ card, setRow }) {
+  const rows = msRowsOf(card);
+  const field = (i, key, label, placeholder, price) => /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+    /*#__PURE__*/React.createElement("label", { style: lbl }, label),
+    /*#__PURE__*/React.createElement("input", {
+      style: inp, placeholder, value: rows[i][key],
+      onChange: e => setRow(i, key, e.target.value),
+      onBlur: price ? (e => setRow(i, key, formatPrice(e.target.value))) : undefined
+    }));
+  return /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 } },
+    [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: { display: "flex", flexDirection: "column", gap: 4, padding: "8px 8px 10px", background: "#fafafa", border: "1px solid #eee", borderRadius: 3 }
+    },
+      /*#__PURE__*/React.createElement("div", {
+        style: { fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#888", textTransform: "uppercase", fontFamily: "system-ui,sans-serif" }
+      }, "Size " + (i + 1) + (i < 2 ? "" : " (optional)")),
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 6 } },
+        field(i, 'size', "Size" + (i < 2 ? " *" : ""), i === 0 ? "e.g. 500ml" : i === 1 ? "e.g. 1L" : "e.g. 5L", false),
+        field(i, 'price', "Price" + (i < 2 ? " *" : ""), i === 0 ? "e.g. £5.49" : i === 1 ? "e.g. £9.99" : "e.g. £24.99", true)),
+      field(i, 'unit', "Unit Price", "e.g. £1.10 per 100ml", false))));
+}
+
 // The four price modes, in one place: three editors render the same picker.
 const PRICE_MODES = [["single", "Single Price"], ["wasnow", "Was / Now"], ["multibuy", "Multi-Buy"], ["box", "Each + Box"]];
+// Multi-Size is a Promo A4 mode only: the other templates have nowhere to put
+// three prices, so only the A4 editor offers it.
+const A4_PRICE_MODES = PRICE_MODES.concat([["multisize", "Multi-Size"]]);
 
 // The inputs Each + Box needs, shared by every editor that offers the mode.
 // `lbl`, `inp` and formatPrice are module-level and only read at render time.
@@ -493,6 +701,7 @@ const EMPTY = {
   tiers: ["", ""],
   boxPrice: "",
   boxQty: "",
+  msRows: [{ size: "", price: "", unit: "" }, { size: "", price: "", unit: "" }, { size: "", price: "", unit: "" }],
   validUntil: "",
   halal: false
 };
@@ -807,7 +1016,7 @@ function PriceCard({
   }, /*#__PURE__*/React.createElement("path", {
     d: "M0,0v607.7l607.7,192.3V0H0ZM441.32,416.15h-60.96v-107.62c0-14.79-2.87-25.68-8.64-32.69-5.79-7.05-12.8-10.54-21.07-10.54s-15.37,3.48-21.25,10.54c-5.9,7.01-8.86,17.91-8.86,32.69v107.62h-60.93v-107.62c0-14.79-2.83-25.68-8.48-32.69-5.63-7.05-12.73-10.54-21.25-10.54s-15.6,3.75-21.25,11.26c-5.65,7.55-8.46,18.81-8.46,33.87v105.72h-60.96v-206.92h55.3l3.75,26.32c5.52-9.5,12.93-16.91,22.2-22.2,9.27-5.25,19.2-7.87,29.73-7.87,26.57,0,45.9,10.9,57.93,32.74,5.52-9.81,13.05-17.68,22.59-23.74,9.52-6.01,19.94-9,31.22-9,24.83,0,44.27,8.32,58.31,25.01,14.04,16.69,21.07,42.69,21.07,78.05v107.62ZM508.29,416.21h-46.35v-46.35l46.35-14.67v61.01Z",
     fill: "#FEDE00"
-  })), /*#__PURE__*/React.createElement("foreignObject", {
+  })), card.priceMode === "multisize" ? null : /*#__PURE__*/React.createElement("foreignObject", {
     x: sideW + 18,
     y: 14,
     width: CW - sideW - 26,
@@ -835,7 +1044,9 @@ function PriceCard({
       color: "#000",
       marginTop: 6
     }
-  }, card.size) : null)), card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
+  }, card.size) : null)), card.priceMode === "multisize" ? /*#__PURE__*/React.createElement(MultiSizeBlock, {
+    card, CW, sideW, preview: true
+  }) : card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
     card, xR: CW - 18, anchorY: 455, maxW: CW - 18 - sideW - 20, maxFs: 86, preview: true
   }) : card.priceMode === "multibuy" ? (() => {
     const activeTiers = (card.tiers || []).filter(t => t && t.trim());
@@ -2217,6 +2428,13 @@ function App() {
       return next;
     });
   };
+  const setMsRow = (i, k, v) => setForm(f => {
+    const base = _isDemoForm(f) ? { ...EMPTY } : f;
+    const rows = msRowsOf(base);
+    rows[i] = { ...rows[i], [k]: v };
+    if (k === "size" || k === "price") rows[i].unit = calcUnitPrice(rows[i].size, rows[i].price);
+    return { ...base, msRows: rows };
+  });
   const setTier = (i, v) => setForm(f => {
     const t = [...f.tiers];
     t[i] = v;
@@ -2265,7 +2483,7 @@ function App() {
   } : c));
   const card8 = cards8x4[editIdx8x4];
   const canSave8 = card8.productName && (card8.priceMode === "multibuy" ? (card8.tiers[0] || "").trim() : card8.priceMode === "box" ? boxPriceReady(card8) : card8.priceMode === "wasnow" ? card8.wasPrice && card8.nowPrice : card8.nowPrice);
-  const canSave = form.productName && (form.priceMode === "multibuy" ? (form.tiers[0] || "").trim() : form.priceMode === "box" ? boxPriceReady(form) : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
+  const canSave = form.productName && (form.priceMode === "multisize" ? multiSizeReady(form) : form.priceMode === "multibuy" ? (form.tiers[0] || "").trim() : form.priceMode === "box" ? boxPriceReady(form) : form.priceMode === "wasnow" ? form.wasPrice && form.nowPrice : form.nowPrice);
 
   React.useEffect(() => {
     try {
@@ -2430,8 +2648,7 @@ function App() {
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
           '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="#000"/>' +
           '<g transform="scale(' + (sideW/607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' +
-          nameTextSVG +
-          sizeText + priceSVG(card) +
+          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false) : nameTextSVG + sizeText + priceSVG(card)) +
           '<rect x="0" y="' + (CH-badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' +
           '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + pricesToTspans(badge, badgeFontSize) + '</text>' +
           (card.halal ? halalMarkSVG(sideW + 18 + 65, 240, 130, false) : '') +
@@ -2678,7 +2895,7 @@ function App() {
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
-          nameTextSVG + sizeText + priceText + halalText + validText +
+          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false) : nameTextSVG + sizeText + priceText) + halalText + validText +
           '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
@@ -3319,7 +3536,7 @@ function App() {
     placeholder: "e.g. Cypressa Extra Virgin Olive Oil",
     value: form.productName,
     onChange: e => set("productName", e.target.value)
-  })), /*#__PURE__*/React.createElement("div", {
+  })), form.priceMode === "multisize" ? null : /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 13
     }
@@ -3338,7 +3555,7 @@ function App() {
     style: lbl
   }, "Price Mode"), /*#__PURE__*/React.createElement("div", {
     style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 4 }
-  }, PRICE_MODES.map(([val, label]) => /*#__PURE__*/React.createElement("button", {
+  }, A4_PRICE_MODES.map(([val, label]) => /*#__PURE__*/React.createElement("button", {
     key: val,
     onClick: () => set("priceMode", val),
     style: {
@@ -3430,6 +3647,9 @@ function App() {
   }))), form.priceMode === "box" && /*#__PURE__*/React.createElement(BoxPriceFields, {
     card: form,
     set: set
+  }), form.priceMode === "multisize" && /*#__PURE__*/React.createElement(MultiSizeFields, {
+    card: form,
+    setRow: setMsRow
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 18
