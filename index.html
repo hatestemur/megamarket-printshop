@@ -475,11 +475,16 @@ const MS_LABEL_FS = 44, MS_LABEL_DROP = 6, MS_LABEL_MIN_FS = 14, MS_LABEL_GAP = 
 const MS_PRICE_FS = 150, MS_PRICE_LH = 0.9, MS_PRICE_LS = -2;
 const MS_PENCE_FS = 84, MS_PENCE_NUDGE = 4;
 const MS_UNIT_FS = 24, MS_UNIT_GAP = 10, MS_UNIT_LS = 0.3;
+// Ink dipping further than this below the baseline, as a fraction of the price
+// size, is a descender the unit price has to clear. Anything shallower is the
+// overshoot every rounded glyph has — "£5.49" dips 0.014 — and a £ price must
+// not move. A real descender in this face is 0.22.
+const MS_DESC_MIN = 0.06;
 // Weight, tracking and alignment per line kind — the price has its own run
 // splitting below, so it is not in the table.
 const MS_TYPE = {
   name:  { w: 500, ls: MS_NAME_LS, anchor: 'start' },
-  label: { w: 700, ls: 0,          anchor: 'start' },
+  label: { w: 500, ls: 0,          anchor: 'start' },
   unit:  { w: 400, ls: MS_UNIT_LS, anchor: 'end'   }
 };
 
@@ -516,6 +521,17 @@ function msPriceRuns(txt) {
   if (tail) runs.push({ text: tail, fs: MS_PRICE_FS, dy: shift });
   return runs;
 }
+// How far the drawn ink dips below the baseline. The pence run is raised, so
+// its own descent is measured from where it actually sits.
+function msInkDescent(runs) {
+  let dy = 0, deepest = 0;
+  runs.forEach(r => {
+    dy += r.dy || 0;
+    deepest = Math.max(deepest, dy + mmDescent(r.text, r.fs, '700', 'MadaniArabic'));
+  });
+  return deepest > MS_PRICE_FS * MS_DESC_MIN ? deepest : 0;
+}
+
 // Measured run by run, the way it is drawn: the pence are set smaller, so a
 // price measured whole comes out wider than it prints.
 const msRunsW = runs =>
@@ -524,7 +540,9 @@ const msRunsW = runs =>
 
 // One list of lines in 794-space, x measured from the white area's left edge.
 // `preview` adds the grey placeholders the live card shows while it is empty.
-function multiSizeLayout(card, preview) {
+// `bottom` is where the red footer starts, in the same 794-space.
+function multiSizeLayout(card, preview, bottom) {
+  const floorY = bottom || (MS_NAME_H + MS_ROWS_H);
   let rows = msFilledRows(msRowsOf(card));
   const ghostRow = rows.length === 0;
   if (ghostRow) { if (!preview) return []; rows = [{ size: '', price: '', unit: '' }]; }
@@ -565,20 +583,35 @@ function multiSizeLayout(card, preview) {
     if (label) {
       // When the two would collide the size label gives way, never the price.
       const room = xR - xL - (runs ? msRunsW(runs) : 0) - MS_LABEL_GAP;
-      const fs = mmFitFs(label, room, '700', MS_LABEL_MIN_FS, MS_LABEL_FS);
+      const fs = mmFitFs(label, room, '500', MS_LABEL_MIN_FS, MS_LABEL_FS);
       items.push({ t: 'label', x: xL, y: top + MS_LABEL_DROP + fs, fs, text: label });
     }
     if (runs) items.push({ t: 'price', x: xR, y: priceY, runs, ghost: !r.price.trim() });
-    if (r.unit.trim()) items.push({
-      t: 'unit', x: xR, y: priceY + MS_UNIT_GAP + MS_UNIT_FS, fs: MS_UNIT_FS, text: r.unit.trim()
-    });
+    const unit = r.unit.trim();
+    if (unit) {
+      // A pence price hangs a "p" below the baseline, so the unit price clears
+      // the ink rather than the baseline and "69p" keeps the gap "£1.29"
+      // already has. A £ price only overshoots, so those rows do not move.
+      const drop = runs ? msInkDescent(runs) : 0;
+      const inkBot = priceY + drop;
+      const uDesc = mmDescent(unit, MS_UNIT_FS, '400', 'MadaniArabic');
+      let y = inkBot + MS_UNIT_GAP + MS_UNIT_FS;
+      if (y + uDesc > floorY) {
+        // On the last row the full gap plus that drop would carry the line into
+        // the red footer. There is no room for 10 at both ends, so the line
+        // takes the middle of what is left and touches neither.
+        const uAsc = mmAscent(unit, MS_UNIT_FS, '400', 'MadaniArabic');
+        y = Math.max(inkBot + uAsc, (inkBot + floorY - uDesc + uAsc) / 2);
+      }
+      items.push({ t: 'unit', x: xR, y, fs: MS_UNIT_FS, text: unit });
+    }
   });
   return items;
 }
 
 // Export paths: one scaled group, so every number above is printed as given.
-function multiSizeSVG(card, CW, sideW, preview) {
-  const items = multiSizeLayout(card, preview);
+function multiSizeSVG(card, CW, sideW, preview, whiteH) {
+  const items = multiSizeLayout(card, preview, whiteH && whiteH * MS_SPEC_W / CW);
   if (!items.length) return '';
   const body = items.map(it => {
     if (it.t === 'price') {
@@ -598,8 +631,8 @@ function multiSizeSVG(card, CW, sideW, preview) {
 }
 
 // Same block for the live preview, built with createElement.
-function MultiSizeBlock({ card, CW, sideW, preview }) {
-  const items = multiSizeLayout(card, preview);
+function MultiSizeBlock({ card, CW, sideW, preview, whiteH }) {
+  const items = multiSizeLayout(card, preview, whiteH && whiteH * MS_SPEC_W / CW);
   if (!items.length) return null;
   const FONT = "'MadaniArabic', sans-serif";
   return /*#__PURE__*/React.createElement("g", {
@@ -1045,7 +1078,7 @@ function PriceCard({
       marginTop: 6
     }
   }, card.size) : null)), card.priceMode === "multisize" ? /*#__PURE__*/React.createElement(MultiSizeBlock, {
-    card, CW, sideW, preview: true
+    card, CW, sideW, preview: true, whiteH: CH - badgeH
   }) : card.priceMode === "box" ? /*#__PURE__*/React.createElement(BoxPriceBlock, {
     card, xR: CW - 18, anchorY: 455, maxW: CW - 18 - sideW - 20, maxFs: 86, preview: true
   }) : card.priceMode === "multibuy" ? (() => {
@@ -1615,6 +1648,28 @@ function mmWidth(text, fs, weight, family) {
   if (!_mmMeasCtx) _mmMeasCtx = document.createElement('canvas').getContext('2d');
   _mmMeasCtx.font = (weight || '400') + ' 100px ' + (family || 'MadaniArabic') + ', sans-serif';
   return _mmMeasCtx.measureText(String(text)).width * fs / 100;
+}
+
+// How far `text` dips below the baseline, in the real face. Linear in font
+// size, like the advance widths above. The regex is the fallback for engines
+// without actualBoundingBoxDescent: the letters that descend in Latin text.
+function mmDescent(text, fs, weight, family) {
+  if (!text) return 0;
+  if (!_mmMeasCtx) _mmMeasCtx = document.createElement('canvas').getContext('2d');
+  _mmMeasCtx.font = (weight || '400') + ' 100px ' + (family || 'MadaniArabic') + ', sans-serif';
+  const d = _mmMeasCtx.measureText(String(text)).actualBoundingBoxDescent;
+  if (typeof d !== 'number' || !isFinite(d)) return (/[gjpqy]/.test(String(text)) ? 22 : 0) * fs / 100;
+  return Math.max(0, d) * fs / 100;
+}
+
+// How far `text` rises above the baseline, measured the same way.
+function mmAscent(text, fs, weight, family) {
+  if (!text) return 0;
+  if (!_mmMeasCtx) _mmMeasCtx = document.createElement('canvas').getContext('2d');
+  _mmMeasCtx.font = (weight || '400') + ' 100px ' + (family || 'MadaniArabic') + ', sans-serif';
+  const a = _mmMeasCtx.measureText(String(text)).actualBoundingBoxAscent;
+  if (typeof a !== 'number' || !isFinite(a)) return 74 * fs / 100;
+  return Math.max(0, a) * fs / 100;
 }
 
 // Largest size ≤ maxFs at which `text` fits `maxW`. Used instead of a
@@ -2648,7 +2703,7 @@ function App() {
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
           '<rect x="0" y="0" width="' + sideW + '" height="' + CH + '" fill="#000"/>' +
           '<g transform="scale(' + (sideW/607.7).toFixed(5) + ')"><path d="' + logoPath + '" fill="#FEDE00"/></g>' +
-          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false) : nameTextSVG + sizeText + priceSVG(card)) +
+          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false, CH - badgeH) : nameTextSVG + sizeText + priceSVG(card)) +
           '<rect x="0" y="' + (CH-badgeH) + '" width="' + CW + '" height="' + badgeH + '" fill="#CC2222"/>' +
           '<text x="' + (CW/2) + '" y="' + (CH-badgeH+badgeH*0.65) + '" text-anchor="middle" fill="#FEDE00" font-family="MadaniArabic" font-weight="700" font-size="' + badgeFontSize + '" letter-spacing="3">' + pricesToTspans(badge, badgeFontSize) + '</text>' +
           (card.halal ? halalMarkSVG(sideW + 18 + 65, 240, 130, false) : '') +
@@ -2895,7 +2950,7 @@ function App() {
         const svgString = '<svg width="' + CW + '" height="' + CH + '" viewBox="0 0 ' + CW + ' ' + CH + '" xmlns="http://www.w3.org/2000/svg">' +
           '<defs><style>' + fontStyle + '</style></defs>' +
           '<rect width="' + CW + '" height="' + CH + '" fill="white"/>' +
-          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false) : nameTextSVG + sizeText + priceText) + halalText + validText +
+          (card.priceMode === 'multisize' ? multiSizeSVG(card, CW, sideW, false, CH - badgeH) : nameTextSVG + sizeText + priceText) + halalText + validText +
           '</svg>';
         return { svgString, widthMm: 210, heightMm: 297 };
       });
