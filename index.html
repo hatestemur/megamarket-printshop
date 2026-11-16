@@ -484,7 +484,7 @@ const MS_DESC_MIN = 0.06;
 // splitting below, so it is not in the table.
 const MS_TYPE = {
   name:  { w: 500, ls: MS_NAME_LS, anchor: 'start' },
-  label: { w: 500, ls: 0,          anchor: 'start' },
+  label: { w: 400, ls: 0,          anchor: 'start' },
   unit:  { w: 400, ls: MS_UNIT_LS, anchor: 'end'   }
 };
 
@@ -583,7 +583,7 @@ function multiSizeLayout(card, preview, bottom) {
     if (label) {
       // When the two would collide the size label gives way, never the price.
       const room = xR - xL - (runs ? msRunsW(runs) : 0) - MS_LABEL_GAP;
-      const fs = mmFitFs(label, room, '500', MS_LABEL_MIN_FS, MS_LABEL_FS);
+      const fs = mmFitFs(label, room, '400', MS_LABEL_MIN_FS, MS_LABEL_FS);
       items.push({ t: 'label', x: xL, y: top + MS_LABEL_DROP + fs, fs, text: label });
     }
     if (runs) items.push({ t: 'price', x: xR, y: priceY, runs, ghost: !r.price.trim() });
