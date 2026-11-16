@@ -739,6 +739,52 @@ const EMPTY = {
   halal: false
 };
 
+// Has anything been typed into this card? The Reset button on every editor
+// lights only when there is something to clear, so a tab that is already empty
+// offers nothing to press.
+const FILLED_FIELDS = ['productName', 'size', 'variety', 'origin', 'wasPrice', 'nowPrice',
+  'unitPrice', 'multibuyPrice', 'boxPrice', 'boxQty', 'validUntil'];
+function cardHasInput(c) {
+  if (!c) return false;
+  if (FILLED_FIELDS.some(k => String(c[k] || '').trim())) return true;
+  if (Array.isArray(c.tiers) && c.tiers.some(t => String(t || '').trim())) return true;
+  if (Array.isArray(c.msRows) && c.msRows.some(r => r &&
+    (String(r.size || '').trim() || String(r.price || '').trim() || String(r.unit || '').trim()))) return true;
+  return !!c.halal || !!c.specialOffer;
+}
+
+// The empty card each sheet editor starts from, kept beside EMPTY so Reset and
+// the editors' own initial state cannot drift apart.
+const mk8x4 = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "",
+  badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single", tiers: ["", ""],
+  validUntil: "", halal: false });
+const mkShelfSm = () => ({ productName: "", size: "", wasPrice: "", nowPrice: "", unitPrice: "",
+  badgeType: "offer", badgeText: "SPECIAL OFFER", badgeBg: R, badgeFg: K, priceMode: "single",
+  tiers: ["", ""], validUntil: "", halal: false });
+
+// Quieter than Draft: it takes work away, so it does not ask for the eye.
+function ResetButton({ onReset, disabled }) {
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onReset,
+    disabled,
+    title: "Clear every field on this tab",
+    style: {
+      width: "100%",
+      marginTop: 8,
+      background: "#fff",
+      color: disabled ? "#ccc" : "#777",
+      border: "1.5px solid " + (disabled ? "#eee" : "#ddd"),
+      padding: "10px",
+      fontWeight: 700,
+      fontSize: 10,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontFamily: "system-ui, sans-serif"
+    }
+  }, "Reset");
+}
+
 /* ─── Fresh-section categories (Fruit & Veg, butcher cuts) ── */
 const CATEGORIES = {
   'fruit-veg': { key: 'fruit-veg', label: 'Fruit & Veg', color: '#27a554', darkColor: '#0a5f29' },
@@ -2067,7 +2113,7 @@ const queueTypeLabel = t => t === 'a4' ? 'Promotional Card' : (isBudgT(t) ? BUDG
 // three: the only differences are the slot count and the preview blurb, both
 // read off BUDG.
 function BudgEditor(props) {
-  const { kind, cards, editIdx, canAdd, onSelect, onKind, setField, setTier, onDraft, onExportNow, onTextOnly } = props;
+  const { kind, cards, editIdx, canAdd, canReset, onSelect, onKind, setField, setTier, onDraft, onExportNow, onTextOnly, onReset } = props;
   const cfg = BUDG[kind];
   const card = cards[editIdx] || budgEmptyCard();
   const per = cfg.per;
@@ -2162,7 +2208,8 @@ function BudgEditor(props) {
           : React.createElement(React.Fragment, null,
               React.createElement('button', { onClick: onDraft, disabled: !canAdd, style: { flex: 1, background: canAdd ? '#333' : '#ddd', color: W, border: 'none', padding: '12px', fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', cursor: canAdd ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif' } }, 'Draft'),
               React.createElement('button', { onClick: onExportNow, disabled: !canAdd, title: 'Export immediately', style: { flex: 1, background: canAdd ? Y : '#ddd', color: canAdd ? K : '#aaa', border: 'none', padding: '14px', fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', cursor: canAdd ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif' } }, '⎙ Export Now'),
-              React.createElement('button', { onClick: onTextOnly, disabled: !canAdd, title: 'Export text only — no colour ink', style: { background: canAdd ? '#fff' : '#ddd', color: canAdd ? '#000' : '#aaa', border: canAdd ? '1.5px solid #000' : '1.5px solid #ddd', padding: '14px 10px', fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', cursor: canAdd ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' } }, 'Text Only')))),
+              React.createElement('button', { onClick: onTextOnly, disabled: !canAdd, title: 'Export text only — no colour ink', style: { background: canAdd ? '#fff' : '#ddd', color: canAdd ? '#000' : '#aaa', border: canAdd ? '1.5px solid #000' : '1.5px solid #ddd', padding: '14px 10px', fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', cursor: canAdd ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' } }, 'Text Only'))),
+      React.createElement(ResetButton, { onReset, disabled: !canReset })),
     React.createElement('div', { className: 'preview-pane' },
       React.createElement('div', { style: { fontSize: 10, color: '#000', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'system-ui,sans-serif' } }, cfg.blurb),
       React.createElement('div', { style: { flexShrink: 0, width: 'min(calc(100% - 16px), calc((100vh - 200px) * 0.707))', aspectRatio: '210 / 297', background: '#f0f0f0', boxShadow: '0 6px 28px rgba(0,0,0,0.22)', overflow: 'hidden', position: 'relative' } },
@@ -2613,6 +2660,28 @@ function App() {
   const showToast = msg => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+  // Reset clears the tab in front of you and nothing else: the export queue,
+  // the other tabs and the Fresh cards' categories all survive it.
+  const canReset = template === "a4" ? cardHasInput(form)
+    : template === "8x4" ? cards8x4.some(cardHasInput)
+    : template === "shelfsm" ? cardsShelfSm.some(cardHasInput)
+    : template === "fresh" ? cardsFresh.some(cardHasInput)
+    : isBudgT(template) ? (budgList || []).some(cardHasInput)
+    : false;
+  const resetEditor = () => {
+    if (!canReset) return;
+    if (template === "a4") setForm({ ...EMPTY });
+    else if (template === "8x4") { setCards8x4([0, 1, 2, 3].map(mk8x4)); setEditIdx8x4(0); }
+    else if (template === "shelfsm") { setCardsShelfSm([0, 1, 2].map(mkShelfSm)); setEditIdxShelfSm(0); }
+    else if (template === "fresh") {
+      // The category is the section of the shop, not something typed in, so a
+      // reset leaves each card pointing at the same one.
+      setCardsFresh(prev => prev.map(c => ({ ...EMPTY_FRESH, category: (c && c.category) || 'fruit-veg' })));
+      setEditIdxFresh(0);
+    }
+    else if (isBudgT(template)) { budgResetKind(budgKind); setBudgIdxFor(budgKind, 0); }
+    showToast("Cleared ✓");
   };
   const canAddSheet = template === 'fresh' ? canAddFresh : cards8x4.some(c => c.productName);
 
@@ -3780,7 +3849,7 @@ function App() {
       cursor: canSave ? "pointer" : "not-allowed",
       fontFamily: "system-ui, sans-serif"
     }
-  }, "Draft")), /*#__PURE__*/React.createElement("div", {
+  }, "Draft")), /*#__PURE__*/React.createElement(ResetButton, { onReset: resetEditor, disabled: !canReset }), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       fontSize: 10,
@@ -4109,7 +4178,7 @@ function App() {
       fontFamily: "system-ui, sans-serif",
       whiteSpace: "nowrap"
     }
-  }, "Text Only")))), /*#__PURE__*/React.createElement("div", {
+  }, "Text Only"))), /*#__PURE__*/React.createElement(ResetButton, { onReset: resetEditor, disabled: !canReset })), /*#__PURE__*/React.createElement("div", {
     className: "preview-pane"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4147,6 +4216,8 @@ function App() {
     style: { display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }
   }, /*#__PURE__*/React.createElement(BudgEditor, {
     kind: budgKind,
+    canReset: canReset,
+    onReset: resetEditor,
     cards: budgList,
     editIdx: budgEditIdx,
     canAdd: canAddBudg,
@@ -4241,7 +4312,8 @@ function App() {
           : /*#__PURE__*/React.createElement(React.Fragment, null,
               /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('working'), disabled: !canAddShelfSm, style: { flex: 1, background: canAddShelfSm ? "#333" : "#ddd", color: W, border: "none", padding: "12px", fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "Draft"),
               /*#__PURE__*/React.createElement("button", { onClick: () => addToQueue('ready', true), disabled: !canAddShelfSm, title: "Export immediately (⌘↩)", style: { flex: 1, background: canAddShelfSm ? Y : "#ddd", color: canAddShelfSm ? K : "#aaa", border: "none", padding: "14px", fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" } }, "⎙ Export Now"),
-              /*#__PURE__*/React.createElement("button", { onClick: () => exportTextPDF('shelfsm', cardsShelfSm.some(c => c.productName) ? [{ type: 'shelfsm', status: 'ready', data: cardsShelfSm }] : []), disabled: !canAddShelfSm, title: "Export text only — no colour ink", style: { background: canAddShelfSm ? "#fff" : "#ddd", color: canAddShelfSm ? "#000" : "#aaa", border: canAddShelfSm ? "1.5px solid #000" : "1.5px solid #ddd", padding: "14px 10px", fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" } }, "Text Only")))),
+              /*#__PURE__*/React.createElement("button", { onClick: () => exportTextPDF('shelfsm', cardsShelfSm.some(c => c.productName) ? [{ type: 'shelfsm', status: 'ready', data: cardsShelfSm }] : []), disabled: !canAddShelfSm, title: "Export text only — no colour ink", style: { background: canAddShelfSm ? "#fff" : "#ddd", color: canAddShelfSm ? "#000" : "#aaa", border: canAddShelfSm ? "1.5px solid #000" : "1.5px solid #ddd", padding: "14px 10px", fontWeight: 800, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", cursor: canAddShelfSm ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif", whiteSpace: "nowrap" } }, "Text Only"))),
+      /*#__PURE__*/React.createElement(ResetButton, { onReset: resetEditor, disabled: !canReset })),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } }, "Shelf Talker \xB7 107\xD780mm \xB7 3 per A4"),
       /*#__PURE__*/React.createElement("div", { style: { flexShrink: 0, width: "min(calc(100% - 16px), calc((100vh - 200px) * 0.707))", aspectRatio: "210 / 297", background: "#f0f0f0", boxShadow: "0 6px 28px rgba(0,0,0,0.22)", overflow: "hidden", position: "relative" } },
@@ -4367,7 +4439,8 @@ function App() {
                 style: { flex: 1, background: canAddFresh ? Y : "#ddd", color: canAddFresh ? K : "#aaa", border: "none", padding: "14px", fontWeight: 900, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canAddFresh ? "pointer" : "not-allowed", fontFamily: "system-ui, sans-serif" }
               }, "⎙ Export Now")
             )
-      )
+      ),
+      /*#__PURE__*/React.createElement(ResetButton, { onReset: resetEditor, disabled: !canReset })
     ),
     /*#__PURE__*/React.createElement("div", { className: "preview-pane" },
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: "#000", letterSpacing: 1, textTransform: "uppercase", fontFamily: "system-ui,sans-serif" } },
